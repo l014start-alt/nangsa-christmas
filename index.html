@@ -1,0 +1,1223 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>안녕편지 · 낭만젊음사랑</title>
+<meta name="description" content="우리들의 순간, 여섯 번째 — 잊고 싶은 기억이 있나요? 낭만젊음사랑의 방에 들어와 사람들에게 말을 걸어 보세요.">
+<style>
+@font-face{font-family:'Galmuri11';src:url(fonts/Galmuri11.woff2) format('woff2');font-display:swap}
+@font-face{font-family:'Galmuri11';font-weight:700;src:url(fonts/Galmuri11-Bold.woff2) format('woff2');font-display:swap}
+@font-face{font-family:'Dokrip';src:url(fonts/dokrip.woff) format('woff');font-display:swap}
+:root{
+  --bg:#1E1816; --ink:#F3EEE4; --paper:#F3EEE4; --paper-ink:#2a201c;
+  --burgundy:#913E2E; --gold:#d9b86a; --line:#5a463c; --dim:#a89a8c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:'Galmuri11',system-ui,sans-serif;-webkit-font-smoothing:none;overscroll-behavior:none}
+body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px}
+button{font-family:inherit;cursor:pointer}
+
+.stage{position:relative;width:min(816px,100%);}
+canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;border:3px solid #0e0a09;outline:2px solid #5a3826;background:#000;touch-action:none;cursor:pointer}
+
+.hud{position:absolute;top:10px;left:12px;right:12px;display:flex;justify-content:space-between;pointer-events:none;font-size:12px;text-shadow:1px 1px 0 #000}
+.hud span{background:rgba(14,10,9,.72);padding:4px 8px;border:1px solid #5a3826}
+
+/* 대화창 — 옛날 RPG 말풍선 */
+.dialog{position:absolute;left:2%;right:2%;bottom:3%;min-height:118px;background:rgba(18,12,10,.94);border:3px solid #d9b86a;box-shadow:0 0 0 3px #1E1816,0 0 0 5px #5a3826;padding:16px 20px 20px;display:none;cursor:pointer;user-select:none}
+.dialog.on{display:block}
+.dialog .who{position:absolute;top:-16px;left:14px;background:var(--burgundy);color:#fff;font-weight:700;font-size:13px;padding:4px 10px;border:2px solid #d9b86a}
+.dialog .who:empty{display:none}
+.dialog .txt{font-size:16px;line-height:1.75;white-space:pre-wrap;word-break:keep-all;min-height:56px}
+.dialog .next{position:absolute;right:16px;bottom:8px;color:var(--gold);font-size:12px;animation:blink 1s steps(2) infinite}
+.dialog.choosing .next{display:none}
+.choices{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.choices:empty{display:none}
+.choice{background:#2a1d18;color:var(--ink);border:2px solid #5a463c;padding:8px 18px;font-size:15px;font-family:inherit}
+.choice::before{content:"  ";white-space:pre}
+.choice.sel{border-color:var(--gold);background:var(--burgundy)}
+.choice.sel::before{content:"▶ "}
+@keyframes blink{50%{opacity:0}}
+
+.help{margin-top:10px;font-size:12px;color:var(--dim);text-align:center;line-height:1.6;word-break:keep-all}
+
+/* 첫 화면 */
+.intro{position:fixed;inset:0;background:#0e0a09;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:20;padding:24px;text-align:center}
+.intro .kicker{font-size:13px;color:var(--dim);letter-spacing:.1em}
+.intro h1{font-family:'Dokrip','Galmuri11',serif;font-weight:400;font-size:clamp(34px,8vw,60px);line-height:1.3;color:var(--ink)}
+.intro p{font-size:13px;color:var(--dim);line-height:1.9;word-break:keep-all}
+.btn{background:var(--burgundy);color:#fff;border:3px solid #d9b86a;box-shadow:0 0 0 3px #0e0a09;padding:12px 22px;font-size:15px;font-weight:700}
+.btn:hover{filter:brightness(1.12)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:#5a463c}
+.intro .logo{font-family:'Dokrip',serif;font-size:20px;color:var(--gold);margin-top:8px}
+
+/* 안녕편지 쓰는 화면 */
+.writer{position:fixed;inset:0;background:rgba(8,5,4,.92);z-index:30;display:none;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
+.writer.on{display:flex}
+.desk{width:min(560px,100%);display:flex;flex-direction:column;align-items:center;gap:12px;margin:auto 0}
+.desk h2{font-family:'Dokrip',serif;font-weight:400;font-size:34px;color:var(--ink)}
+.verse{font-size:15px;line-height:2;color:var(--ink);text-align:center;word-break:keep-all}
+.ask{font-size:15px;font-weight:700;color:var(--gold);text-align:center;word-break:keep-all}
+.promise{font-size:12px;line-height:1.8;color:var(--dim);text-align:center;word-break:keep-all}
+.feedzone{position:relative;width:100%;overflow:hidden;padding-top:4px}
+.paper{position:relative;background:var(--paper);color:var(--paper-ink);height:236px;padding:22px 22px;box-shadow:0 6px 0 #0e0a09;
+  background-image:repeating-linear-gradient(to bottom,transparent 0 31px,rgba(145,62,46,.28) 31px 32px);background-position:0 21px}
+.paper textarea,.ghost{width:100%;height:100%;border:0;outline:0;resize:none;background:transparent;color:var(--paper-ink);font-family:'Galmuri11',sans-serif;font-size:16px;line-height:32px;word-break:keep-all;white-space:pre-wrap;overflow:hidden}
+.paper textarea::placeholder{color:#9b8d80}
+.strip{position:absolute;left:0;right:0;top:4px;height:236px;background:var(--paper);padding:22px;
+  background-image:repeating-linear-gradient(to bottom,transparent 0 31px,rgba(145,62,46,.28) 31px 32px);background-position:0 21px}
+.shredder{position:relative;width:calc(100% + 24px);height:46px;margin-top:-4px;background:#2b2523;border:3px solid #0e0a09;box-shadow:inset 0 -6px 0 #1a1513;display:flex;align-items:center;justify-content:center;z-index:2}
+.shredder::before{content:"";position:absolute;top:-3px;left:10px;right:10px;height:6px;background:#0e0a09}
+.shredder span{font-family:'Dokrip',serif;color:var(--gold);font-size:16px;opacity:.85}
+.shredder .led{position:absolute;right:14px;width:8px;height:8px;background:#3a2a22}
+.shredder.run .led{background:#7bd88f;box-shadow:0 0 8px #7bd88f}
+.shredder.run{animation:hum .08s steps(2) infinite}
+@keyframes hum{50%{transform:translateX(1px)}}
+.bin{position:relative;width:100%;height:46px;margin-top:-14px;overflow:hidden;pointer-events:none}
+.bit{position:absolute;top:0;width:4px;height:7px;background:var(--paper)}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.hint{font-size:12px;color:#e7a08f;min-height:16px}
+.after{display:none;flex-direction:column;align-items:center;gap:14px;text-align:center;margin:auto 0}
+.after.on{display:flex}
+.after .big{font-size:20px;line-height:1.7;word-break:keep-all}
+.after .small{font-size:13px;line-height:1.9;color:var(--dim);word-break:keep-all}
+.after .count{font-size:13px;color:var(--gold)}
+.jarwrap{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:4px}
+.jar{position:relative;width:180px;height:236px}
+.jar::before{content:"";position:absolute;left:50%;top:56%;width:260px;height:260px;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(255,206,140,.18),rgba(255,206,140,0) 65%);pointer-events:none}
+.jar svg{position:relative;width:180px;height:236px;overflow:visible}
+.jar .pc{opacity:0;transition:opacity .4s}
+.jar .pc.on{opacity:1}
+.fulljars{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:330px}
+.fulljars:empty{display:none}
+.fulljars svg{width:20px;height:28px}
+.fulljars svg.new{animation:pop .6s ease-out}
+@keyframes pop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}
+.fullmore{font-size:12px;color:var(--gold);align-self:center}
+.jarlabel{font-size:14px;line-height:1.8;text-align:center;color:var(--ink)}
+.jarlabel b{color:var(--gold);font-weight:700}
+.jarlabel small{display:block;font-size:11px;color:var(--dim)}
+.after .rest{display:flex;flex-direction:column;align-items:center;gap:14px;opacity:0;transition:opacity .6s}
+.after .rest.on{opacity:1}
+.care{font-size:11px;color:#8d7f73;line-height:1.7}
+
+@media (max-width:700px){
+  body{justify-content:flex-start;padding-top:20px}
+  .dialog{position:relative;left:auto;right:auto;bottom:auto;margin-top:14px;min-height:132px}
+  .dialog .txt{font-size:15px}
+  .stage{display:flex;flex-direction:column}
+  .hud{position:static;order:-1;font-size:11px;margin-bottom:8px}
+  .hud span{padding:3px 6px}
+  .paper,.strip{height:240px}
+  .desk h2{font-size:28px}
+}
+</style>
+</head>
+<body>
+
+<div class="intro" id="intro">
+  <div class="kicker">우리들의 순간, 여섯 번째</div>
+  <h1>잊고 싶은<br>기억이 있나요?</h1>
+  <p>올해 마지막 순간은 반대로 묻습니다.<br>방 안의 사람들에게 말을 걸고,<br>구석 책상에서 안녕편지를 써 보세요.</p>
+  <button class="btn" id="enter">▶ 문 열고 들어가기</button>
+  <div class="logo">낭만젊음사랑</div>
+</div>
+
+<div class="stage" id="stage">
+  <canvas id="game" width="816" height="912" aria-label="낭만젊음사랑 매장을 옮긴 픽셀 방"></canvas>
+  <div class="hud"><span>낭만젊음사랑 · 안녕편지</span><span id="met"></span></div>
+  <div class="dialog" id="dialog" aria-live="polite"><div class="who" id="who"></div><div class="txt" id="txt"></div><div class="choices" id="choices"></div><div class="next">▼</div></div>
+</div>
+<div class="help" id="help">방향키·WASD로 걷고, 스페이스로 말을 겁니다 · 휴대폰은 가고 싶은 곳이나 사람을 누르세요</div>
+
+<div class="writer" id="writer" role="dialog" aria-label="안녕편지 쓰기">
+  <div class="desk" id="deskWrite">
+    <h2>안녕편지</h2>
+    <p class="verse">어떤 기억은 잊어야 살아갈 수 있고,<br>어떤 기억은 잊고 싶어도 잊히지 않고,<br>어떤 기억은 사라졌다고 생각했는데<br>어느 날 갑자기 돌아오기도 합니다.</p>
+    <p class="ask">잊고 싶은 기억을 적고, 파쇄기에 넣어 주세요.</p>
+    <p class="promise">여기 쓰는 글은 어디에도 저장되지 않고, 누구에게도 보내지지 않습니다.<br>파쇄기에 넣는 순간 이 화면에서도 사라집니다.</p>
+    <div class="feedzone" id="feed">
+      <div class="paper" id="paper"><textarea id="ta" maxlength="1200" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="여기에 적어 주세요.&#10;한 줄이어도 괜찮습니다."></textarea></div>
+    </div>
+    <div class="shredder" id="shredder"><span>낭만젊음사랑</span><i class="led"></i></div>
+    <div class="bin" id="bin"></div>
+    <div class="hint" id="hint"></div>
+    <div class="row">
+      <button class="btn" id="shred">파쇄기에 넣기</button>
+      <button class="btn ghost" id="cancel">그만 쓰기</button>
+    </div>
+  </div>
+  <div class="after" id="after">
+    <div class="jarwrap">
+      <div class="jar">
+        <svg viewBox="0 0 160 210" aria-hidden="true">
+          <defs>
+            <clipPath id="jarClip"><path d="M54 40 L54 48 C54 58 22 62 22 84 L22 184 Q22 202 42 202 L118 202 Q138 202 138 184 L138 84 C138 62 106 58 106 48 L106 40 Z"/></clipPath>
+            <linearGradient id="glassG" x1="0" x2="1">
+              <stop offset="0" stop-color="#dfeef5" stop-opacity=".16"/>
+              <stop offset=".35" stop-color="#dfeef5" stop-opacity=".04"/>
+              <stop offset=".8" stop-color="#dfeef5" stop-opacity=".06"/>
+              <stop offset="1" stop-color="#dfeef5" stop-opacity=".18"/>
+            </linearGradient>
+            <linearGradient id="corkG" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="#c89566"/><stop offset="1" stop-color="#8f6240"/>
+            </linearGradient>
+          </defs>
+          <ellipse cx="80" cy="204" rx="62" ry="5" fill="rgba(0,0,0,.45)"/>
+          <path d="M54 40 L54 48 C54 58 22 62 22 84 L22 184 Q22 202 42 202 L118 202 Q138 202 138 184 L138 84 C138 62 106 58 106 48 L106 40 Z" fill="url(#glassG)"/>
+          <g clip-path="url(#jarClip)" id="jarPieces"></g>
+          <path d="M54 40 L54 48 C54 58 22 62 22 84 L22 184 Q22 202 42 202 L118 202 Q138 202 138 184 L138 84 C138 62 106 58 106 48 L106 40 Z" fill="none" stroke="rgba(225,238,244,.7)" stroke-width="2.2"/>
+          <path d="M30 92 Q28 140 31 176" stroke="rgba(255,255,255,.28)" stroke-width="5" stroke-linecap="round" fill="none"/>
+          <path d="M40 90 L40 104" stroke="rgba(255,255,255,.2)" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M130 100 Q132 140 129 170" stroke="rgba(255,255,255,.12)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <rect x="50" y="36" width="60" height="8" rx="3" fill="rgba(225,238,244,.22)" stroke="rgba(225,238,244,.7)" stroke-width="1.6"/>
+          <rect x="57" y="14" width="46" height="26" rx="5" fill="url(#corkG)"/>
+          <rect x="57" y="14" width="46" height="5" rx="3" fill="#d9a878"/>
+          <g fill="#7a5235" opacity=".55"><circle cx="66" cy="27" r="1.2"/><circle cx="79" cy="31" r="1"/><circle cx="92" cy="25" r="1.3"/><circle cx="85" cy="22" r=".8"/></g>
+          <path d="M52 47 Q80 53 108 47" stroke="#b08a5a" stroke-width="2" fill="none"/>
+          <path d="M104 48 Q112 50 113 58" stroke="#b08a5a" stroke-width="1.4" fill="none"/>
+          <g transform="translate(101 54) rotate(10)">
+            <path d="M0 0 L46 0 L46 18 L0 18 L-6 9 Z" fill="#e9dcc0" stroke="#9c7f57" stroke-width="1"/>
+            <circle cx="-1" cy="9" r="1.6" fill="#9c7f57"/>
+            <text x="24" y="12.4" text-anchor="middle" font-family="Dokrip, serif" font-size="9.5" fill="#7a2f28">안녕편지</text>
+          </g>
+        </svg>
+      </div>
+      <div class="fulljars" id="fullJars"></div>
+      <div class="jarlabel" id="jarLabel"></div>
+    </div>
+    <div class="rest" id="afterRest">
+    <div class="big">조금 가벼워졌기를 바랍니다.</div>
+    <div class="small">꺼낸 기억은 다시 쓰인다고 합니다.<br>조금 덜 날카롭게, 조금 덜 무겁게.<br><br>남기고 싶은 소망은<br>매장의 트리에 소망편지로 걸어 주세요.</div>
+    <div class="count" id="count"></div>
+    <div class="row">
+      <button class="btn" id="back">방으로 돌아가기</button>
+      <button class="btn ghost" id="again">하나 더 쓰기</button>
+    </div>
+    <div class="care">혼자 감당하기 어려운 마음이라면, 자살예방 상담전화 109 (24시간)</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+const W = 17, H = 19, T = 16, Z = 3, LW = W*T, LH = H*T;
+const cv = document.getElementById('game'), ctx = cv.getContext('2d');
+const bg = document.createElement('canvas'); bg.width = cv.width; bg.height = cv.height;
+const bctx = bg.getContext('2d');
+const light = document.createElement('canvas'); light.width = cv.width; light.height = cv.height;
+const lctx = light.getContext('2d');
+[ctx,bctx,lctx].forEach(c => c.imageSmoothingEnabled = false);
+
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+};
+
+/* ───────── 지도 ───────── */
+const solid = Array.from({length:H}, () => Array(W).fill(false));
+const S = (x,y) => { if (x>=0&&y>=0&&x<W&&y<H) solid[y][x] = true; };
+for (let x=0;x<W;x++){ for (let y=0;y<=2;y++) S(x,y); S(x,H-1); }
+for (let y=0;y<H;y++){ S(0,y); S(W-1,y); }
+for (let x=3;x<=13;x++){ S(x,4); S(x,3); }  // 바 카운터 + 바 안쪽
+S(7,7); S(9,7); S(7,8); S(8,8); S(9,8);    // 트리 2그루 + 빨간 천 테이블
+for (let y=6;y<=13;y++) S(1,y);             // 스피커 + 책장
+for (let x=6;x<=10;x++){ S(x,9); S(x,10); S(x,11); } // 카펫 위 10인 테이블 + 의자
+S(6,14); S(5,14); S(7,14);                  // 둥근 테이블 + 의자 (큰 테이블과 바 테이블 사이)
+for (let x=2;x<=15;x++) S(x,17);            // 창가 바 테이블
+[2,4,6,10,12,14].forEach(x => S(x,16));       // 바 의자
+S(10,14); S(9,14); S(11,14);                  // 큰 테이블과 바 테이블 사이 동그란 테이블
+S(15,10); S(15,11);                         // 안녕편지 책상
+
+/* ───────── 사람들 ───────── */
+const state = { step: store.get('step2', 0), party: store.get('party', 0), drink: store.get('drink', null), shredded: store.get('shredded', 0), justWrote: false };
+const STEPS = [
+  { target:'staff',   place:'입구',         text:'입구의 직원과 인사하기' },
+  { target:'barista', place:'바',           text:'앞쪽 바에서 주문하기', lines:'order' },
+  { target:'boss',    place:'큰 테이블',    text:'큰 테이블에 앉은 대표에게 말 걸기', lines:'boss1' },
+  { target:'window',  place:'창가',         text:'창가 바 테이블의 손님에게 말 걸기' },
+  { target:'desk',    place:'안녕편지 책상', text:'오른쪽 벽 책상에서 안녕편지 쓰기' },
+  { target:'wish',    place:'트리',         text:'트리 옆 손님에게 말 걸기' },
+  { target:'boss',    place:'큰 테이블',    text:'대표에게 다시 말 걸기', lines:'boss3' },
+  { target:null,      place:'',             text:'천천히 둘러보세요' },
+];
+
+const P = (o) => Object.assign({ skin:'#f0c9a0', shoe:'#2a1a12', hair:'#2a1a12', top:'#ddd', bottom:'#3b3b4a' }, o);
+const npcs = [
+  { id:'boss', name:'낭만젊음사랑 대표', x:6, y:9, dir:'down', seated:true, c:P({hair:'#1b1210', top:'#d8c6a8', bottom:'#2b2b33'}), glasses:true },
+  { id:'barista', name:'바리스타', x:8, y:3, dir:'down', c:P({hair:'#4a2a1a', top:'#f2efe8', bottom:'#2b2b33', apron:'#913E2E'}),
+    spots:[[8,5,'up'],[7,5,'up'],[9,5,'up']] },
+  { id:'window', name:'창가 손님', x:8, y:16, dir:'up', seated:true, c:P({hair:'#2a1a12', top:'#2f3b5c', bottom:'#2b2b33', hat:'#a3242b'}) },
+  { id:'staff', name:'직원', x:2, y:14, dir:'left', c:P({hair:'#2a1a12', top:'#2f2a28', bottom:'#2b2b33', apron:'#913E2E'}) },
+  { id:'wish', name:'트리 옆 손님', x:11, y:7, dir:'left', c:P({hair:'#3a2418', top:'#e0b84a', bottom:'#5a4a3a'}) },
+];
+npcs.forEach(n => S(n.x, n.y));
+
+const player = { x:1, y:15, fx:1, fy:15, dir:'right', moving:false, t:0, step:0, path:[], onArrive:null, c:P({hair:'#20160f', top:'#f3eee4', bottom:'#3a4256', shoe:'#1a1210'}) };
+
+/* ───────── 확인 모드 ─────────
+   true  = 순서 상관없이 아무에게나 말 걸 수 있음 (대사 확인용)
+   false = 배포용. 직원 → 바 주문 → 대표 → 창가 → 바리스타 → 책상 → 트리 → 대표 순서대로 */
+const FREE = false;
+
+/* ───────── 오늘 날씨 (매장 위치 기준, 실패하면 '춥다'로만 말함) ───────── */
+const WEATHER = { kind: 'cold', temp: null };
+(function loadWeather(){
+  try {
+    const ac = new AbortController(); setTimeout(() => ac.abort(), 4000);
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=35.8689&longitude=128.5995&current=temperature_2m,weather_code&timezone=Asia%2FSeoul', { signal: ac.signal })
+      .then(r => r.json()).then(d => {
+        const c = d.current.weather_code, t = d.current.temperature_2m;
+        WEATHER.temp = t;
+        if ([71,73,75,77,85,86].includes(c)) WEATHER.kind = 'snow';
+        else if ((c >= 51 && c <= 67) || (c >= 80 && c <= 82) || c >= 95) WEATHER.kind = 'rain';
+        else WEATHER.kind = t <= 10 ? 'cold' : 'mild';
+      }).catch(() => {});
+  } catch (e) {}
+})();
+const WX = (o) => o[WEATHER.kind] || o.cold;
+
+/* ───────── 손님 글귀 (낭만젊음사랑 책 2023~24, 주제별) ───────── */
+const QUOTES = {"낭만": ["낭만이란, 삶을 조금 더 반짝이게 만들어 주는 것. 비효율적이지만 추억이 되는 것.", "낭만, 뭉클한 이상과 촉촉한 여유 사람들에게 낭만 가득한 목표가 부여되어 동심 가득한 우리가 되기를", "낭만은 어둠을 완화시켜주는 불 빛 같아요. 완전하게 밝혀지지 않고, 은은하게 밝혀주는 그런 빛. 그 속에 있는 ‘나’ 의 모습 그리고 그때 드는 감정이 ‘낭만’ 같아요.", "낭만은 꿈이라 생각해요. 꿈속에선 내가 원하는 낭만을 펼칠 수 있으니까요. 시간이 지나면 결국 깨는 꿈이지만 현실에서도 낭만 있게 살고싶어요. 꿈은 이루어지니까..", "눈을 감고 생각했을때 절로 미소가 지어질 수 있는 행복한 상상 같은 존재. 살아가면서 잊지말아야할, 활력소가 되어주는 그런 것.", "낭만은 노을같은거라 생각해요. 그 때에만 볼 수 있는 따뜻한 색감을 가진 감성.", "[낭만] 현실에 매이지 않고 이상적으로 대하는 태도. 낭만을 몰랐던 어린시절, 낭만을 다하였고 낭만을 알게 된 지금, 낭만을 하는 법을 모른다.", "파스텔 색이라 생각해요. 단색보단 연하고 부드러운, 자기만의 색깔은 유지하되 잘 어우러지는 파스텔 같은 낭만.", "낭만은 현실에서 주어지는 진통제 같은거랄까요. 낭만 없는 삶은 폐허겠죠. 낭만적인 삶을 꿈꾸면서 잠에 들어요.", "낭만은 가볍게 생각하면 행복하지만 깊게 들어갈수록 난해하고 더 어지러워지는 그런 것. 필터를 끼고 바라보는 세상이지만 모른척 넘어가도 용서되는 것. 가끔은 나에게 행복의 사소한 동기.", "당신의 봄은 어떤가요? 봄비에 벚꽃이 다 씻겨버리기 전에, 당신을 만나러 가겠습니다.", "방황하는 순간에도 ‘굳이’ 싶은 일들을 하는 것.", "낭만은, 조개구이가 먹고 싶을 때 훌쩍 인천 앞바다로 떠나는 것. 바다가 보고 싶을 때 망설이지 않는 것.", "새로운 사람들과 새로운 공간에서 만나, 익숙한 공간에서 다시 재회하는 것.", "모든 것을 아우를 수 있는 단어가 ‘낭만’ 아닐까요? 필터를 씌우듯 내가 생각한 어떤 것이든 낭만이라는 단어를 붙이는 순간 생기를 덧 붙여주는것.", "낭만은 책이라고 생각해요. 모두가 책 한권 쯤은 갖고 읽어봤잖아요. 이처럼 낭만은 대부분 경험해보았고 가끔은 책처럼 다시 꺼내어 볼 수 있는.. 책같아요.", "낭만은 추운 겨울 눈을 보고도 따뜻하다는 생각이 드는 그런 감정.", "낭만은 스크래치라 생각합니다. 이리저리 부딪히고 긁혀 아름다운 그림을 그리는 것 그렇게 자신의 그림을 완성해나가는 것.", "낭만은 한 편의 영화에요. 찬란하게 하나의 대본을 잘 소화하고 열심히 불태우다가 결말을 맞이하죠.", "지난 날 모든 순간이다. 두번 다시 돌아오지 않는 그때 그 순간. 감정 모두가 추억이 되어 낭만으로 각색된다.", "낭만은 참기름이야. 없어도 먹는데 전혀 문제 없지만 한 방울만 있어도 인생이 향기로워져", "이 순간을 기억하고 싶을때 나는 낭만이라 부른다.", "찢겨진 장편 소설의 한 페이지, 별 다른 이음새 없이도 어색하지 않을 아무도 모르게 그려놓은 부끄러운 이야기들.", "길을 잃어 돌아오지 못한단면 그곳에서 집 짓고 살겠어요. 내가 원하는대로 나만을 위해서 말이죠.", "낭만은 먹는 것이다. 먹으면 없어지지만 내 몸 속에 영영 남는 것. 내가 무럭무럭 자라게 하는 것.", "닿지 못할 것 같은 순간을 낭만이라 생각해요 그러다 어느날 문득 우연히 마주한 순간을 낭만이라 생각하기도 해요 닿지 않을 것 같다가도 이렇게 예고 없이 다가온 순간에 울컥하는 마음을 낭만이라 생각해요", "타인의 하이라이트 신과 나의 비하인드 씬을 비교하지 않고 나의 작은 비하인드 씬을 사랑할것", "나이에 제한되지 않고 좋아하는 노래를 들으며 사진찍으러 다니는 것, 좋아하는 것을 찾아다니고, 시도해보는 것 등 사소한 것 모두 다 낭만이라고 생각해요. 낭만적인 하루되세요…", "여름밤의 바람이라 생각한다. 여름 내내 뜨겁게 내리쬐는 햇빛에 지치다가도 밤에 부는 선선한 공기를 들이마실때 그 느낌 스치듯 지나갈 수 있지만 그 계절에만 느낄 수 있는 감성.", "낭만은 우리가 원래 누려야 하는 것들을 보거나 느낄때 말을 하는거 같아요. 과연 우리는 지금 무엇을 놓치며 살아가고 있을까요?", "낭만은 내 인생을 관통하는 단어이다. 그렇다면 내 인생은 드넓은 초원일지라도 내 인생인데 길 좀 잃으면 어때 !", "낭만을 계속 마음 안에 가지고 있으면 마음은 계속 청춘 안에서 살아갈 수 있는걸까 고민하고 있어요. 철없음과 종이 한 장차이 같아서..", "낭만, 이유모를 감정의 풍요 요즈음 세상은 숨죽여 울 시간에 꿈 없는 잠을 청하는 편이 낫다. 삶의 작은 일부분에 ‘낭만’을 통해 이유 모를 감정의 풍요가 스며들었으면 한다.", "저는 알록달록 자그마한 들꽃들을 좋아해요. 근데 사진을 찍으면 흐리고 지저분하게 보여요. 그래도 괜찮아요. 제 기억속엔 선명하거든요. 내 기억속에만 있는 들꽃, 꽤 낭만적이지 않나요?", "낭만은 억제되지않은 열정. 자유와 해방, 청춘, 지금 우리들.", "마주보고 웃던 얼굴, 신나서 떠드는 입, 그때 그 공기의 냄새, 그걸 타고 날던 단어들, 그리고 음료 하나.", "청록색으로 빛나는 바다 위 윤슬을 아무 걱정없이, 조급한 마음없이 내내 지켜볼 수 있는것.", "끝없는 끝을 향해 수놓인 발자국과 그 위 발걸음을 이끄는 손길을 따라 펼쳐진 드넓은 바다. 닿을듯 닿지않는, 손끝에서 흩어지는 물결, 낭만.", "낭만은 가방이라고 생각합니다. 언제든지 넣고 꺼낼 수 있는, 잃어버리고 싶지 않을 때 숨겨 넣을 수 있는, 항상 가지고 다닐 수 있는, 누구든 가질 수 있는 그런 가방.", "낭만은, 혼잡함 속에서도 꽃을 볼 수 있는 여유 불구덩이 속에서도 남을 도울 수 있는 용기 사랑하는 사람에 대한 노력", "낭만은 자유라고 생각해요. 누군가는 우산 없이 비를 맞고, 누군가는 혼자 멀리 여행을 떠나는 틀에 구애받지 않는 그런 자유.", "낭만은 바다라고 생각해. 저 깊은 곳에 뭐가 있을까 궁금해서 끝 없이 들어가보고싶은. 그리고 한 번 깊이 빠지면 헤어나오기 어려운.", "비가 와도 우직하게 한잔의 커피를 마시러 온 것. 비에 젖은 바지 끝단이 낭만아닐까..?", "낭만이란 사계절을 온전히 느낄 수 있는 것이다. 봄, 여름, 가을, 겨울을 느끼고 즐길 수 있는 사람이 낭만이지 않을까.", "낭만은 헤어나올 수 없는 것을 알아도 감히 열정 다해 뛰어드는 것. 숨이 가빠져 오더라도 사랑한다면, 그게 뭐든.", "삶을 더욱 다채롭게 만들어주기도, 나와 타인을 단단히 연결하기도, 나를 고립 시키기도 하는 것.", "비 오는 여름 밤에 창문을 열어두고 좋아하는 책을 읽는 것. 낭만이란 닿을 수 없는 꿈과 현실 그 사이 어딘가이다. 현실에서 쉽게 접하진 않지만, 꿈처럼 느껴지기에.", "낭만은 채우려하면 멀어지는 것. 눈을 감으면 그제야 온전히 느껴지는 것. 잊고 지내다 어느 순간 나를 강렬하게 비춰주는것.", "효율이 사라지고 사소한 한순간이 지독히 소중해지는 것.", "나이가 들어감에도, 스물 그 언저리에 내가 머무는 것. 철이들되, 철없이 노는 것.", "낭만이란, 인생이란 큰 캔버스에 수만가지의 그림을 새겨 넣는 것. 진정한 나를 찾으며 끝없이 나아가는 것.", "낭만은 비 같아. 옷 젖을 걱정하면 불편하지만 그냥 받아들이면 시원한 것처럼. 세상 모든게 받아들이면 다 낭만이거든!", "낭만은 지나온 추억이라 생각해요. 꿈 꾸었던 지나온 모든 나날들이 쌓였기 때문에 오늘도 꿈을 꾸네요.", "낭 : 낭만이란 오늘 내 지갑에 만 : 만원짜리 하나가 있어도 아이스 아메리카노를 사먹는 것.", "별 거 아닌데 별 거 인 것. 뜬금없이 선물 받은 꽃 한송이, 맑은 날 올려다본 하늘, 뽀송한 몸으로 침대에 누워서 에어컨 바람맞기, 손편지, 손잡고 걸어가는 노부부의 뒷모습.", "꿈. 내가 놓으면 잊혀지겠지만, 잊혀지겠지만, 잊지 않고 꼭 품는다면 평생 영원히 함께할 거예요.", "낭만이 좋아요. 낭만을 쫓다 생기는 좌절도 낭만이니까요.", "낭만과 낭비의 ‘낭’이 같은 한자라고 합니다. 낭만을 찾으려면 좀 더 멀리 돌아가야 하는걸지도 모르겠습니다. 저는 저와 같은 시간을 걷는 낭만을 믿습니다. 모든 이들의 낭만이 계속되길 소원합니다.", "낭만이란 닿을 수 없는 꿈과 현실 그사이 어딘가이다. 현실에서 쉽게 접하진 않지만, 꿈처럼 느껴지기에"], "젊음": ["젊음이란 때론 용기의 크기라고 생각한다. 나이가 들수록 용기가 작아지고 쓸데없는 고민과 걱정이 늘어나는데, 오늘 그리고 지금이 나에게있어 가장 젊은 순간임을 잊지않고 살아야겠다!!", "젊음은 촛농과 같은 것. 한 때 밝은 빛을 내며 뜨겁게 타오르다, 제 할일을 다하고 흘러내려 내가 바로 설 수 있도록 단단히 굳어지는, 그런것.", "젊음은 떠오르는 태양과 같고, 시간이 지날수록 해진다.", "급하지 않아도 돼요. 새우잠 자도 고래꿈 꾸길 바래요.", "젊음, 청춘, 화양연화 내가 가장 사랑하는 단어 공통점은 아름답다는 것. 그리고 모두가 거쳐간다는 것.", "유효한 시간이 정해져 있는 아름다운 것. 살아감에 있어 한껏 추억할 수 있는 것. 행복, 슬픔, 좌절, 불행 모든것이 있지만 그럼에도 늘 회상하고 싶은 모든것.", "젊음만큼 강력한 무기가 있을까요. 젊음을 이길 수 있는 것은 없다 생각해요. 그리고 저는 젊구요. 그 누구도 저를 막을 수 없어요.", "아껴쓰되 낭비하고 싶은 젊음. 그것이 나의 젊음이다.", "나의 아름답고 아까운 젊음아 천천히 곁에 머물러줘.", "젊음은 낭만과 사랑이라고 생각해요. 젊음이 있기에 뜨거운 사랑도 있고, 젊음이 있기에 낭만이라 부를 수 있는 행동들을 할 수 있으니까요. 그래서 젊음은 곧 낭만과 사랑이에요.", "인생이 항해라면, 젊음은 가장 크고 든든한 배를 타고 가장 험한 파도위를 달리는 시점. 바다를 알기엔 어렸지만 굳세게 맞서낼수 있는.", "절대 마르지 않는 파도처럼 젊음 또한 사라지지 않길.", "젊음에 대하여.. 젊음이란 흘러가는 것, 하지만 머무르는 것.", "마음이 움직이는 걸 가지고 있다면 젊음을 가진 사람입니다. 마음이 말 하는대로 움직이세요.", "젊음은 단어 자체만으로는 활기차야 할 것 같지만 그 나름대로의 힘듦이 있는 시기. 그 힘듦을 헤쳐나가는 힘을 얻을 수 있는 시기인것 같다.", "젊음은 신호등의 노란불 길지 않은 시간에서 때로는 엑셀을 밟기도, 브레이크를 밟기도 해야하는 시간이기 때문", "영원한 것 같지만, 영원하지 않기에 영원하고 싶은것.", "3살도, 18살도, 31살도, 54살도, 80살도 젊은 나이다. 마음이 늙지 않는다면 너의 젊음은 영원할꺼야.", "젊으니까 저마다 저릿하며 절뚝이며 절망하다 저문다.", "젊음, 일교차가 심한 초가을이지 않을까요. 낮은덥고, 밤은 춥고 나의 감정을 좋고, 싫음을 나도 모를때.", "마음껏 치열해야 할때. 치열하게 무너져보고, 치열하게 사랑해볼때 최악이 있어도 그다음이 있음을 알아야 할 때", "인생의 한 시기가 아닌 마음가짐.", "스치는 바람에도 흔들리는게 젊은인 듯 합니다. 그렇게 피어나보려 합니다.", "젊음에는 이유가 없어서 좋다. 내 모든 것에 이유를 설명하는 것이 귀찮은 요즘. 젊음은 별 다른 이유없이 사람들을 끄덕이게 한다. 나는 그래서 가끔 젊음이고 싶을 때가 있다.", "젊음은 천하무적이라고 생각합니다. 뭐든 도전해보고 시도 할 수 있다고 생각해요. 젊음이란 핑계만큼 좋은 핑계는 없답니다.", "젊음은 낭만과 사랑, 모든걸 꿈꾸고 이뤄갈 수 있는 힘이자 시간과 같다고 생각합니다. 그리고 이러한 시간속에 느끼는 수많은 생각과 감정들을 담아보고 자유롭게 표현할 수 있는 또 하나의 기회 같습니다.", "젊음은 결핍이다. 그래서 자주 쓰리다. 무언가를 기다리고, 찾아 떠난다. 결국 바라던 것을 얻지는 못하나 다른 무어를 잔뜩 달고 돌아온다. 그게 젊은 나를 깨닫게 한다. 성장시킨다.", "그러니까 이건 한 서투름에 관한 이야기이다.", "젊음은 ‘흔들리는 확신’이라 생각해요. 흔들리기에 불안할 수 있어도 빛날 미래의 ‘확신’이랍니다.", "무너지는 모래성을 쌓을 수 있는 용기", "어떤 파도에 휩쓸려도 후회 없는 그런 날들이길 추억할 수 있는 여정이길.", "‘젊음’이 젊은이이게 무리한 용기를 요구하고 있지는 않나..? 그 자체로도 눈부시게 아름다운 청춘이라는걸 더 빨리 깨닫고 싶다. 나도.", "젊음이란, 어떨때는 빠르게 흘러갔으면- 이라 생각하지만 어떨때는 사무치게 그리운 것. 그러나 우리는 어느 순간 어느때나 오늘이라는 젊음에 늘 존재하고 있다.", "푸르기만 하던 하늘에도 구름이 지고 붉은 노을이 덮어오듯, 잡아두고 싶지만 오래도록 머무를 수 없는, 지내는 시간보다 되돌아 보는 시간이 더 긴 그 찰나의 푸르름.", "젊음은 아스팔트의 아지랑이라 생각해요. 반짝이고 빛날때 피어나고 차가운 밤이 오면 식어버리는..", "무서울만큼 이상하리만큼 불안정 했던 날들에게 고함. 청춘의 이름. 언젠간 무채색이 될.", "아픔을 견뎌내는 수백만가지의 방법. 그 과정이 너무도 찬란하기에 사랑받는", "젊음은 노래와 같다고 생각해요. 노래를 듣고 부르는 순간엔 빛나지만 시간이 지나면 ‘이런 노래도 있었지’ 하는 그런 젊음. 무엇보다 빛나던 젊음.", "나이가 들어가면서요, 어느순간 기억의 무게가 생의 무게를 압도하고 말아요. 자꾸만 마음이 과거로 기우는 거에요. 근데, 그 힘으로 살아요.", "낡았음에도 빛나는 나의 유구하고 무구함의 미학. 언젠간 열어볼 것.", "여러해가 지나 나이를 먹어도 나의 어딘가에 항상 존재하고 있는 어린왕자같은 마음", "젊음이란 영원한것. 흘러가는 시간을 붙잡을 수는 없지만, 나의 젊음의 순간들을 우리는 기억할 수 있기에.", "젊음은 자신이 원하는 생각을 실행으로 옮길 수 있는 용기이다. 누군가는 오래 젊음을 느끼고 누군가는 젊음을 느끼지 못한다.", "알아가는게 많을수록 젊음을 보내는 기분이지만, 더 큰 파도앞에서 빠르게 일어날 수 있겠죠.", "묵묵히 앞을 향해 나아가고 있지만, 과거의 나에게 항상 지게되는 것. 젊음을 대가로 무언가를 얻어가고 있다.", "젊음이란 소주와 같다. 젊음이란 이유로 무엇이든 할수있게 만들어 주니까.", "이중적인 소중함. 유형적으로는 유한하지만, 무형적으로는 무한한 것이 젊음이라 생각해요. 우리의 젊음은 짧으면서도 영원한 것 아닐까요.", "젊음은 지난 여름의 복숭아와 같다. 그 계절의 우량과 일조량에 수확된 미묘한 차이의 당도를 가진 복숭아를 한입 베어문 것이다. 다시 느낄수 없고, 다시 맛볼수 없는.", "무모하다는 걸 알면서도 도전해보는 것. 세상이 정해놓은 또래보다는 느리고 다른 길이지만 한 번 가보려고 합니다. 저의행복을 위해."], "사랑": ["사랑은 존재하는 것. 마음속이나, 현실에서나 존재해야 사랑이라고 생각해요.", "당신이 뭘 좋아하는지 당최 모르겠어서 이렇게 저렇게 꾸며보느라 우스운 꼴이지만.", "봐도봐도 귀여운 구석을 찾을 수 있는 것.", "사랑은 초상화를 그리는 과정같아요. 초상화를 그리는 과정에서 나의 모습을 더 알게되고 자세히 보게 되는 것처럼 사랑도 나를 찬찬히 뜯어보고 알아가는 과정이에요!", "저는 사랑이 참 좋아요. 사랑은 매일매일 제게 새로운 감정을 느낄 수 있게 해주잖아요 그런 재미난 사랑이 저는 참 좋아요", "사랑이란 붉은 신호등이다. 켜지기만 하면 무조건 멈춰야 하는. 위험을 예고하면서도 동시에 안전도 보장하는.", "상대방을 있는 그대로 받아들이고 이해하는 것. 좋아하는 마음으로 옆에 가둬두지 않고 날아갈 힘을 주는것.", "사랑은 우주라고 생각해요. 한번 터지면 잡을수 없이 커져버리는 마음. 여러 행성들이 부딪히고 없어지고 깨지고 합쳐지면서 더욱 단단해지는 사랑같아요.", "진짜 사랑은 고민하지 않고 ‘아 이게 사랑이구나’ 하는 것. 한참을 고민하고 이것을 적은 난 아직 사랑을 잘 모른다.", "사랑은 향수 같아요. 향은 좋고 싫음이 마음속부터 그냥 느껴지잖아요. 향이 질리기도 하지만 분명 다시 생각나요. 향에는 수많은 기억이 담겨서 어느날 문득 우연히 맡으면 기억까지 함께 찾아와요.", "사랑은 헷갈리게 하지않아..", "어려운건 사랑이 아니라고 생각해요. 쉬워야 사랑임.. 어렵게 만드는 사람이 있으면 버리세요!! 행복하십쇼 :)", "사랑이란, 감추려해도 감출 수 없는 이기려해도 이길 수 없는 놓으려해도 놓을 수 없는 것.", "잡힐 것 같으면서도 쉽게 잡히지 않는 흩날리는 벚꽃. 오랜 노력 끝에 잡게 되면 따스한 봄이 가기전까지 간직하고자 하지만 끝끝내 봄과 함께 내 품에서 사라져버린다.", "눈처럼 소복이 쌓이는 것. 조용히, 그리고 빛나는 새하얀 순수함이 빛나는 다 녹으면 흘러가버리는 새까맣게.", "그러니까 내가 이해하는 한 사랑이라는건, 어떤 극한의 개념이었다. 규정할 수 없는 무언가를 간신히 단어안에 가둬 놓는 것.", "물 속에 있는 물건이라고 생각합니다. 보이지만 확실하게 볼 수 없으니까,,,", "사랑은 연필 같아요. 연필로 상상했던 사랑을 그리다가도 연필심이 부러지면서 잠시 아팠다가도 깎아내고 다시 생겨난 연필심으로 또 다시 사랑을 그리는…", "잔잔한 파도가 치는 몽돌해변을 보며 자갈의 소리를 듣고 무릎담요를 나눠 덮고 차가운 공기의 향을 맡고 서로의 어깨에 기대어 짧지만 긴 시간을 보내는 것.", "삶을 지속할 수 있는 이유가 되고 일상의 큰 파동이 되고 어떤 날에는 고통이 되다가 또 다른 날에는 고통을 이기는 기쁨이 되는 것", "닭다리 양보 할게. 난 퍽퍽살 좋아하거든.", "만만 가지 언어로 표현해도 밝힐 수 없는 것. 내 사전 속 사랑은 어떤 모습이고 어떻게 변해갈까? 나와 같은 언어를 사용하는 당신과 함께 평생토록 고쳐쓰고 싶다.", "풍선처럼 불면 부를수록 부풀어지지만 너무 꽉 잡아버리면 터지는 그런 존재랄까요 어린아이처럼 잡고 있어야만 하는 그런거,,", "사랑은 모닥불이에요 때론 추워서 따뜻한 모닥 불이 몸과 마음을 따뜻하게 하지만 어느 순간 모닥불도 제 쓰임을 다하면 꺼지는것이 사랑도 모닥불의 일생과 같아요.", "굳이 어떻게 자신을 꾸며내거나 자신의 최고의 것을 보이지 않아도 있는 그대로 있을 수 있게, 그렇게 묵묵히 바라봐주는 사랑의 마음을 가질 수 있는 사람이 되었으면 좋겠다.", "‘愛(사랑애)’ 라는 한자에서 많은 사람들이 心(마음)이라는 부수에 집중 하지만 저는 그 보다 따라간다는 夂(천천히걷다) 부수가 꽤나 마음에 듭니다.", "일부인줄 알았는데 전부였다.", "사랑은 돈을 쓰고 싶은 것. 왜냐!! 다 사주고 싶거든… 부자면 좋겠어 다 사주게…!", "사랑은 모래같다. 꽉 쥐면 조금밖에 남지 않는 모래지만 살살 쥐면 모래가 많이 남아 있는 것 처럼.", "사랑은 표현하는 순간 그 크고도 묘한 의미가 퇴색되어간다. 나의 사랑은 언제나 내 마음 속에만 있다.", "온전한 건 없고 영원한 것도 없다. 그러나 우리는 그런 사랑을 찾아 끝없이 헤맨다. 결론은 현재를 사랑해야한다. 그저 함께인 그 순간에 집중하면서.", "우연으로 마주한 그들은 서로를 운명이라 자처하며 영원을 말하곤 한다. 영원은 그들의 생각보다 더 절절한 사랑으로 이루어지는 것임에도 불구하고.", "사랑이란, 젊음 시절의 낭만과 늙은 시절의 행복을 함께 하는 것.", "사랑은 효율적이지 않고, 합리적이지도 않다. 생각하지말고, 그냥 사랑해라.", "사랑이라는건 이성간의 사랑으로 규정되어 있는게 아니라 잔잔한 친구와의 우정도 사랑이고, 가족간의 안정적인 버팀목도 사랑. 늘 잔잔하고 행복한 사랑에 잠겨살기.", "내가 사랑했던 모든 순간의 온도, 내음, 들려오던 당신들의 목소리와 그 공기까지 영원토록 품고 살아갈 나의 들꽃이여.", "상대의 작은 조각을 좋아하는것이 비로소 사랑이 아닐까 한다. 작은 몸짓이나 표정 하나에 나는 늘 무장해제가 되었으니.", "우리는 나약해 사랑이 그걸 지켜줄거야 사랑은 나약해 우리가 그걸 지켜줘야해", "세상에는 수많은 꽃들이 있지만 그대는 저에게 시들지 않는 특별한 꽃이에요.", "사랑은 도자기와 같다. 오랜 시간 조심히 보듬을 수록 도자기는 예쁘지만 순간 너무 많은 힘이나 조금 어긋나면 금방 무너져 다신 쓸 수 없는것이 도자기이도 하다. 사랑이란 그런 순간들이다.", "외롭게 하지 않는 것. 관심과 질문이 끊이지 않는 것.", "붉다. 그러나 검다. 불처럼 뜨겁기도 하지만 우리에겐 끝이 언젠가 있으니,,", "돌이켜 보면 사랑이란 이름의 무수한 날들은 하나같이 사랑밖에 객사했듯이 눈의 계절이 저물면 저 아픈 고백 또한 질척이는 농담이 되고 마는 일", "사랑은 그저 단어일뿐이야 내 마음을 표현할 수 없어서 나의 전부를 나의 모든걸 나의 여름을 사랑이란 말에 담는게 아쉬울 뿐이야.", "사랑은 막다른 길을 뚫어 새로운 길을 만들 수 있는 힘이 있다. 막힌 길인걸 알고 있음에도 이어나가고 싶은 것이 사랑이다.", "25살의 나는 누군가를 위함이 아닌 나를 위한 단어로 쓰기로 했다.", "우리는 비를 맞아도 좋았고, 눈을 맞으면 사랑을 읊었다.", "아침인사를 보내고 싶은 사람 맛있는 음식을 먹으면 떠오르는 사람 기다림이 아깝지 않은 사람", "완벽하지 않은 것조차 완벽하다고 생각하게 되는 순간의 감정", "상대를 향한 내 마음이 너무 무거워 함부로 입 밖으로 뱉을 수 없을 때 사랑이란 단어에 마음이 다 담기지 않으나 형용할 단어가 단지 사랑뿐일 때, 그게 사랑이라 생각합니다.", "들꽃이라는 의미가 공감이 많이 된다. 이름을 알기 전 스쳐가는 인연들과 이름을 알고 난 후 푹 빠져버려 그 꽃만 찾는 것.", "용기내서 고백하세요. 후회되더라도 추억으로 남겠죠 뭐 기억은 미화되는 것이니까", "우리는 그만 사랑하지 않고 살 순 없는걸까 그깟 시시한 감정이 뭐라고 우린 한 세기를 사랑 앞에 방황하며 살아갈까 어떻게 기꺼이 자신의 세계를 허무는 걸까. 그러고도 다시 사랑할까", "‘낭만’과 ‘젊음’처럼 사랑스러운 단어가 있을까.", "영원과 운명과 전생과 온갖 영적이고 비합리적이고 우스운 것들에 대한 믿음을 갖도록 하는것", "사랑은 의미있는 들꽃 나도 누군가에게 의미있는 들꽃이겠죠. 혹은 스쳐가는 아름다움 아름다움이 쌓여 의미있는 들꽃이 되기까지 기다리고 또 기다립니다.", "저물어 자리를 비킨 해를 기다리는 해바라기의 마음 긴 기다림이 고통스럽고 그만 두고 싶음에도 해가 뜨는 아침을 기다릴 수밖에 없는 불가항력", "사랑은 노력이라 생각해요 좋아하는 것들을 얻기 위해 노력하는 것처럼 사람마음도 그냥 얻어지지 않아요 아끼는 만큼 상대를 위해 노력해줘요."]};
+
+/* ───────── 대사 ───────── */
+const LINES = {
+  intro: [
+    [null, '문을 열자 커피 냄새와 따뜻한 공기가 밀려온다.'],
+  ],
+  order: {
+    ask: ['바리스타', '어서 오세요. 주문 도와드릴게요.'],
+    menu: ['낭만 한 잔 주세요.', '젊음 한 잔 주세요.', '사랑 한 잔 주세요.'],
+    after: {
+      get 낭만(){ return ['바리스타', '어느 손님이 낭만에 대해 남기고 간 글이에요.\n' + WX({ snow:'오늘처럼 눈 오는 날', rain:'오늘처럼 비 오는 날', cold:'이렇게 추운 날', mild:'오늘 같은 날' }) + ' 와 주신 것도, 저희한텐 낭만이에요.']; },
+      젊음: ['바리스타', '어느 손님이 젊음에 대해 남기고 간 글이에요.\n오늘은 서두르지 말고 쉬었다 가세요.'],
+      get 사랑(){ return ['바리스타', '어느 손님이 사랑에 대해 남기고 간 글이에요.\n' + WX({ snow:'마침 오늘 밖에 눈이 오네요.', rain:'마침 오늘 밖에 비가 오네요.', cold:'밖이 많이 춥죠. 따뜻할 때 드세요.', mild:'따뜻할 때 천천히 드세요.' })]; },
+    },
+    serve1: ['바리스타', '다 내려지면 자리로 가져다드릴게요.'],
+    serve2: ['바리스타', '다 내려지면 두 분 자리로 가져다드릴게요.'],
+    next: ['바리스타', '기다리시는 동안 큰 테이블에 계신 대표님께 인사해 보세요.\n올해 이 방에서 있었던 이야기를 들려주실 거예요.'],
+  },
+  boss1: [
+    ['낭만젊음사랑 대표', '어서 오세요. 낭만젊음사랑 대표입니다.\n찾아와 주셔서 감사해요. 올 연말은 조금 더 따뜻하셨으면 좋겠습니다.'],
+    ['낭만젊음사랑 대표', '올해 저희는 네 번, 같은 질문을 드렸어요.\n“기억하고 싶은 순간이 있나요?”'],
+    ['낭만젊음사랑 대표', '그 질문을 일 년 내내 붙들고 있다 보니, 알게 된 게 하나 있습니다.\n이건 사실 기억보다 망각에 관한 질문이었다는 거요.'],
+    ['낭만젊음사랑 대표', '기억하고 싶은 순간을 하나 고르려면,\n나머지 수많은 순간은 흘려보내야 하잖아요.'],
+    ['낭만젊음사랑 대표', '다 붙잡고 있으면 아무것도 또렷하지 않아요.\n잊을 수 있어야 남은 기억이 선명해집니다.'],
+    ['낭만젊음사랑 대표', '기억에서 가장 중요한 건 어쩌면 망각일지도 모른다고,\n올해 그런 생각을 자주 했습니다.'],
+    ['낭만젊음사랑 대표', '다만 잊고 싶다고 다 잊히는 건 아니더라고요.\n놓으려 할수록 자꾸 돌아오는 기억도 있으니까요.'],
+    ['낭만젊음사랑 대표', '그래서 올해 마지막 순간은 반대로 여쭤보려고 합니다.\n잊고 싶은 기억이 있나요?'],
+    ['낭만젊음사랑 대표', '오른쪽 벽 쪽에 작은 책상을 하나 놓아 두었어요.\n거기서 쓰신 건 아무도 읽지 않습니다. 저도요.'],
+    ['낭만젊음사랑 대표', '그 전에 창가 손님께 먼저 인사해 보세요.\n올해 저희 순간들을 거의 다 함께해 주신 분이에요.'],
+  ],
+  boss3: [
+    ['낭만젊음사랑 대표', '다녀오셨군요.'],
+    ['낭만젊음사랑 대표', '털어놓는다고 기억이 지워지지는 않는대요.\n다만 꺼낼 때마다 조금씩 다른 모양으로 다시 저장된다고 해요.'],
+    ['낭만젊음사랑 대표', '우리는 기억하는 것만으로 만들어지지 않습니다.\n잊어버린 것들로도 만들어집니다.'],
+    ['낭만젊음사랑 대표', '남기고 싶은 소망이 있다면 트리에 걸어 주세요.\n내년 이맘때, 다시 만나요.'],
+  ],
+  window: [
+    ['창가 손님', '저는 여기가 참 좋아요.\n올해도 엄청 자주 왔어요.'],
+    ['창가 손님', '봄에는 저만의 에세이를 써서 남겼고,\n향기억보관소에선 소중한 순간이 담긴 향을 기록했어요.'],
+    ['창가 손님', '이름보관소에선 기억하고 싶은 이름에 대한 이야기를 남겼고,\n낭만여지도엔 제 낭만이 깃든 장소를 작성했어요.'],
+    ['창가 손님', '돌아보니 올해 내내 뭔가를 남기기만 했네요.\n그런데 이번엔 내려놓는 거래요.'],
+    ['창가 손님', '남길 건 금방 떠올랐는데, 내려놓을 건 쉽게 꺼내지지가 않네요.\n이상하게 그게 제일 어려워요.'],
+    ['창가 손님', '저기 오른쪽 벽에 스탠드 켜진 책상 보이시죠?\n거기서 잊고 싶은 기억을 적고, 다 쓰면 파쇄기에 넣으면 된대요.'],
+    ['창가 손님', '아주 잘게 잘려서 아무도 읽을 수 없고,\n조각은 바에 있는 유리병에 12월부터 1월까지 모아 둔대요.'],
+    ['창가 손님', '이 화면에서 쓰는 편지도 어디로도 보내지지 않고,\n이 기기 안에서 잘려서 끝난대요.'],
+    ['창가 손님', '이름이 안녕편지래요. 잊고 싶은 기억에게 안녕, 하고 보내는 편지.\n먼저 가서 써 보세요. 저는 조금 더 생각해 보고 갈게요.'],
+  ],
+  wish: [
+    ['트리 옆 손님', '저는 소망편지 쓰러 왔어요.\n내년에 있었으면 하는 행복한 순간을 미리 상상해서 쓰는 편지요.'],
+    ['트리 옆 손님', '다 쓰면 휴대폰 뒷번호 네 자리를 적어서 트리에 걸어요.\n일 년 동안 가게에서 맡아 주신대요.'],
+    ['트리 옆 손님', '내년 이맘때 찾으러 오면,\n일 년 전의 제가 쓴 편지를 읽게 되는 거죠.'],
+    ['트리 옆 손님', '잊을 건 저 책상에 두고 가고, 남길 건 여기 거는 거예요.'],
+    ['트리 옆 손님', '대표님께 한 번 들러 보세요.\n아직 큰 테이블에 계실 거예요.'],
+  ],
+  again: {
+    staff: [['직원', '편하신 자리에 앉으세요.\n주문은 앞쪽 바에서 도와드릴게요.']],
+    baristaEarly: [['바리스타', '커피는 금방 가져다드릴게요.']],
+    boss: [['낭만젊음사랑 대표', '천천히 둘러보세요. 편하게 계시다 가세요.']],
+    bossEnd: [['낭만젊음사랑 대표', '내년 이맘때, 다시 만나요.']],
+    get window(){ return [['창가 손님', WX({ snow:'눈이 오니까 괜히 한 해가 다 간 것 같아요.', rain:'비 오는 창밖을 보고 있으면, 괜히 한 해가 다 간 것 같아요.', cold:'날이 추워지니까 괜히 한 해가 다 간 것 같아요.', mild:'창밖을 보고 있으면 괜히 한 해가 다 간 것 같아요.' })]]; },
+    barista: [['바리스타', '천천히 쓰셔도 돼요. 커피는 식지 않게 데워 둘게요.']],
+    wish: [['트리 옆 손님', '내년 이맘때, 꼭 찾으러 와요.']],
+  },
+  deskEarly: [[null, '아직 비어 있는 책상이다.\n창가 손님 이야기를 먼저 들어 보자.']],
+  outBooth: [[null, '책상에서 일어나니, 트리 쪽에서 누군가 이쪽을 보고 있다.']],
+  theEnd: [[null, '이 방에서 들을 이야기는 여기까지다.\n문을 나서기 전에 천천히 둘러봐도 좋다.']],
+  jar: () => [[null, '유리병 안에 잘게 잘린 종이가 쌓여 있다.\n누가 무엇을 썼는지는 아무도 모른다.' + (JAR.total ? `\n\n(지금까지 ${JAR.total}통 · 가득 찬 병 ${Math.floor(JAR.total / JAR_CAPACITY)}병)` : '')]],
+  machine: [[null, '에스프레소 머신이 낮게 숨을 쉬고 있다.']],
+  pollack: [[null, '현판 아래 명태 한 마리가 명주실에 감겨 걸려 있다.\n나쁜 기운은 막고 좋은 일만 들어오라는 뜻이다.']],
+  tree: [[null, '트리에 소망편지들이 매달려 있다.\n모두 내년 이맘때 주인을 기다리는 중이다.']],
+  table: [[null, '빨간 천 위에 아직 아무것도 쓰이지 않은 소망편지지가 놓여 있다.\n소망편지는 매장에서, 종이에 직접 씁니다.']],
+  shelf: [
+    [null, '책장 한가운데 얇은 책 한 권이 비스듬히 꽂혀 있다.\n보르헤스, 「기억의 천재 푸네스」.'],
+    [null, '모든 것을 기억하는 남자의 이야기다.\n한 번 본 구름 모양도, 한 번 들은 문장도 그는 잊지 못한다.'],
+    [null, '그래서 그는 오히려 생각을 하지 못한다.\n생각한다는 건 차이를 잊고 묶어 내는 일이기 때문이다.'],
+  ],
+  speaker: [[null, '커다란 스피커 두 대가 책장을 사이에 두고 서 있다.\n공연이 있는 날엔 이 방이 노래로 가득 찬다.']],
+  barTable: [[null, '창을 따라 길게 놓인 바 테이블이다.\n혼자 온 사람들이 창밖을 보며 나란히 앉는 자리.']],
+  roundTable: [[null, '동그란 테이블 위에 아직 김이 오르는 찻잔이 놓여 있다.']],
+  longTable: [[null, '열 사람이 둘러앉는 긴 테이블이다.\n모르는 사람끼리도 나란히 앉게 되는 자리.']],
+  get window_o(){ return [[null, WX({ snow:'창밖에 눈이 내린다.', rain:'창밖에 비가 내린다.', cold:'창밖으로 차가운 겨울 거리가 보인다.', mild:'창밖으로 사람들이 천천히 지나간다.' })]]; },
+  door: [[null, '들어온 철문이다. 무거운 문이 조용히 닫혀 있다.\n나가기 전에 방을 한 바퀴 둘러보자.']],
+  emptyTable: [[null, '식은 커피잔 두 개가 남아 있다.']],
+};
+
+/* ───────── 상호작용 대상 ───────── */
+const things = [];
+const addThing = (tiles, act, spots) => things.push({ tiles, act, spots });
+npcs.forEach(n => addThing([[n.x,n.y]], () => talkNpc(n), n.spots));
+addThing([[13,4]], () => say(LINES.jar()), [[13,5,'up'],[14,4,'left']]);
+addThing([[5,4]], () => say(LINES.machine), [[5,5,'up']]);
+addThing([[7,7],[9,7]], () => say(LINES.tree));
+addThing([[7,8],[8,8],[9,8]], () => say(LINES.table));
+addThing([[1,8],[1,9],[1,10],[1,11]], () => say(LINES.shelf));
+addThing([[1,6],[1,7],[1,12],[1,13]], () => say(LINES.speaker));
+addThing([6,7,8,9,10].flatMap(x => [[x,9],[x,10],[x,11]]), () => say(LINES.longTable));
+const DESK_STEP = STEPS.findIndex(st => st.target === 'desk');
+addThing([[15,10],[15,11]], () => (FREE || state.step >= DESK_STEP) ? openWriter() : say(LINES.deskEarly), [[14,10,'right'],[14,11,'right']]);
+addThing(Array.from({length:15},(_,i)=>[1+i,18]), () => say(LINES.window_o));
+addThing([[0,15],[0,16]], () => say(LINES.door));
+addThing(Array.from({length:14},(_,i)=>[2+i,17]).concat([[2,16],[4,16],[6,16],[10,16],[12,16],[14,16]]), () => say(LINES.barTable));
+addThing([[10,14],[9,14],[11,14]], () => say(LINES.roundTable));
+addThing([[6,14],[5,14],[7,14]], () => say(LINES.emptyTable));
+const thingAt = (x,y) => things.find(t => t.tiles.some(([a,b]) => a===x && b===y));
+
+const DIRS = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
+const dirTo = (fx,fy,tx,ty) => tx>fx?'right':tx<fx?'left':ty>fy?'down':'up';
+const walkable = (x,y) => x>=0&&y>=0&&x<W&&y<H && !solid[y][x];
+
+function spotsOf(t){
+  if (t.spots) return t.spots;
+  const out = [];
+  t.tiles.forEach(([x,y]) => Object.entries(DIRS).forEach(([d,[dx,dy]]) => {
+    const sx = x-dx, sy = y-dy;   // 그 자리에 서서 d 방향을 보면 대상
+    if (walkable(sx,sy)) out.push([sx,sy,d]);
+  }));
+  return out;
+}
+
+function bfs(goals){
+  const key = (x,y) => y*W+x;
+  const goalMap = new Map(goals.map(g => [key(g[0],g[1]), g]));
+  const start = [player.x, player.y];
+  if (goalMap.has(key(...start))) return { path:[], goal:goalMap.get(key(...start)) };
+  const prev = new Map([[key(...start), null]]);
+  const q = [start];
+  while (q.length){
+    const [x,y] = q.shift();
+    for (const [dx,dy] of Object.values(DIRS)){
+      const nx=x+dx, ny=y+dy, k=key(nx,ny);
+      if (!walkable(nx,ny) || prev.has(k)) continue;
+      prev.set(k, key(x,y)); q.push([nx,ny]);
+      if (goalMap.has(k)){
+        const path=[]; let c=k;
+        while (c !== key(...start)){ path.unshift([c%W, Math.floor(c/W)]); c = prev.get(c); }
+        return { path, goal:goalMap.get(k) };
+      }
+    }
+  }
+  return null;
+}
+
+/* ───────── 대화창 ───────── */
+const dlg = document.getElementById('dialog'), who = document.getElementById('who'), txt = document.getElementById('txt');
+let queue = [], typing = null, full = '', onDone = null, pending = null, choice = null;
+const choicesEl = document.getElementById('choices');
+function say(lines, done){
+  queue = lines.slice(); onDone = done || null;
+  dlg.classList.add('on'); nextLine();
+}
+function showChoices(){
+  const opts = pending; pending = null;
+  choice = { opts, sel: 0 };
+  dlg.classList.add('choosing');
+  choicesEl.innerHTML = '';
+  opts.choices.forEach((label, i) => {
+    const b = document.createElement('button'); b.className = 'choice' + (i===0 ? ' sel' : ''); b.textContent = label;
+    b.addEventListener('click', e => { e.stopPropagation(); pick(i); });
+    choicesEl.appendChild(b);
+  });
+}
+function moveChoice(d){
+  if (!choice) return;
+  choice.sel = (choice.sel + d + choice.opts.choices.length) % choice.opts.choices.length;
+  [...choicesEl.children].forEach((b,i) => b.classList.toggle('sel', i === choice.sel));
+}
+function pick(i){
+  const opts = choice.opts; choice = null;
+  choicesEl.innerHTML = ''; dlg.classList.remove('choosing');
+  queue = []; onDone = null;
+  opts.onChoose(i);
+}
+function nextLine(){
+  if (typing){ clearInterval(typing); typing = null; txt.textContent = full; if (pending) showChoices(); return; }
+  if (choice){ pick(choice.sel); return; }
+  if (!queue.length){ dlg.classList.remove('on'); const f = onDone; onDone = null; f && f(); return; }
+  const [name, line, opts] = queue.shift();
+  who.textContent = name || ''; full = line; txt.textContent = ''; pending = opts || null;
+  let i = 0;
+  typing = setInterval(() => {
+    i++; txt.textContent = full.slice(0,i);
+    if (i >= full.length){ clearInterval(typing); typing = null; if (pending) showChoices(); }
+  }, 26);
+}
+const talking = () => dlg.classList.contains('on');
+dlg.addEventListener('click', nextLine);
+
+function advance(){ state.step = Math.min(STEPS.length-1, state.step+1); store.set('step2', state.step); updateHud(); }
+function greet(){
+  const staff = npcs.find(n => n.id === 'staff');
+  staff.dir = dirTo(staff.x, staff.y, player.x, player.y);
+  say([['직원', '어서 오세요.\n몇 분이서 오셨나요?', { choices:['1명','2명'], onChoose: i => {
+    state.party = i + 1; store.set('party', state.party);
+    say([['직원', (i ? '두 분이시군요.' : '한 분이시군요.') + '\n편하신 자리 잡으시고, 주문은 앞쪽 바에서 도와드릴게요.']], () => { staff.dir = 'up'; advance(); });
+  } }]]);
+}
+function order(){
+  const O = LINES.order;
+  say([[...O.ask, { choices: O.menu, onChoose: i => {
+    state.drink = i; store.set('drink', i);
+    const cat = ['낭만','젊음','사랑'][i], list = QUOTES[cat];
+    const q = list[Math.floor(Math.random() * list.length)];
+    say([
+      ['바리스타', `${cat} 한 잔이요.\n내리는 동안, 저희 책에서 한 구절 읽어 드릴게요.`],
+      ['바리스타', `“${q}”`],
+      O.after[cat],
+      state.party === 2 ? O.serve2 : O.serve1, O.next,
+    ], () => advance());
+  } }]]);
+}
+function talkFree(n){
+  if (n.id === 'staff') return greet();
+  if (n.id === 'barista') return order();
+  if (n.id === 'boss') return say([['낭만젊음사랑 대표', '(확인 모드) 어떤 대화를 볼까요?', { choices:['처음 이야기', '편지 쓰고 난 뒤'], onChoose: i => say(i ? LINES.boss3 : LINES.boss1) }]]);
+  say(LINES[n.id]);
+}
+function talkNpc(n){
+  n.dir = dirTo(n.x, n.y, player.x, player.y);
+  if (n.id === 'barista' || n.id === 'boss') n.dir = 'down';
+  if (FREE) return talkFree(n);
+  const cur = STEPS[state.step];
+  if (cur.target === n.id){
+    if (n.id === 'staff'){ greet(); return; }
+    if (cur.lines === 'order'){ order(); return; }
+    say(LINES[cur.lines || n.id], () => { advance(); if (state.step === STEPS.length-1) say(LINES.theEnd); });
+    return;
+  }
+  const first = STEPS.findIndex(st => st.target === n.id);
+  if (first < state.step){
+    let key = n.id;
+    if (n.id === 'boss' && state.step === STEPS.length-1) key = 'bossEnd';
+    if (n.id === 'barista' && state.step <= DESK_STEP) key = 'baristaEarly';
+    say(LINES.again[key]);
+  } else {
+    say([[n.name, `반가워요. 먼저 ${cur.place} 쪽으로 가 보세요.`]]);
+  }
+}
+function updateHud(){ document.getElementById('met').textContent = FREE ? '확인 모드 · 순서 없이 대화' : `다음 · ${STEPS[state.step].text}`; }
+updateHud();
+
+/* ───────── 입력 ───────── */
+const held = [];
+const KEYMAP = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
+const writerOpen = () => document.getElementById('writer').classList.contains('on');
+const introOpen = () => document.getElementById('intro').style.display !== 'none';
+addEventListener('keydown', e => {
+  if (writerOpen()){ if (e.key === 'Escape') closeWriter(); return; }
+  if (introOpen()){ if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); enter(); } return; }
+  if (choice){
+    const d0 = KEYMAP[e.code];
+    if (d0){ e.preventDefault(); moveChoice(d0 === 'left' || d0 === 'up' ? -1 : 1); return; }
+    if (e.code === 'Digit1' || e.code === 'Numpad1'){ pick(0); return; }
+    if (e.code === 'Digit2' || e.code === 'Numpad2'){ pick(1); return; }
+    if ((e.code === 'Digit3' || e.code === 'Numpad3') && choice.opts.choices.length > 2){ pick(2); return; }
+  }
+  const d = KEYMAP[e.code];
+  if (d){ e.preventDefault(); if (!talking()){ player.path = []; player.onArrive = null; if (!held.includes(d)) held.push(d); } return; }
+  if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyZ'){
+    e.preventDefault(); if (e.repeat) return;
+    if (talking()) nextLine(); else if (!player.moving) interact();
+  }
+});
+addEventListener('keyup', e => { const d = KEYMAP[e.code]; if (d){ const i = held.indexOf(d); if (i>=0) held.splice(i,1); } });
+addEventListener('blur', () => held.length = 0);
+
+function interact(){
+  const [dx,dy] = DIRS[player.dir];
+  let tx = player.x+dx, ty = player.y+dy;
+  let t = thingAt(tx,ty);
+  if (!t && solid[ty] && solid[ty][tx]) t = thingAt(tx+dx, ty+dy);   // 카운터 너머
+  if (t) t.act();
+}
+
+cv.addEventListener('pointerdown', e => {
+  if (introOpen() || writerOpen()) return;
+  if (talking()){ if (!choice) nextLine(); return; }
+  const r = cv.getBoundingClientRect();
+  const tx = Math.floor((e.clientX - r.left) / r.width * LW / T);
+  const ty = Math.floor((e.clientY - r.top) / r.height * LH / T);
+  // 사람 머리 부분(윗칸)을 눌러도 그 사람에게 말 걸기
+  const below = npcs.find(n => n.x === tx && n.y === ty + 1);
+  const t = thingAt(tx,ty) || (below && thingAt(below.x, below.y));
+  if (t){
+    const res = bfs(spotsOf(t));
+    if (res){ player.path = res.path; player.onArrive = () => { player.dir = res.goal[2]; t.act(); }; if (!res.path.length && !player.moving) { player.onArrive(); player.onArrive = null; } }
+  } else if (walkable(tx,ty)){
+    const res = bfs([[tx,ty,player.dir]]);
+    if (res){ player.path = res.path; player.onArrive = null; }
+  }
+});
+
+/* ───────── 움직임 ───────── */
+const SPEED = 0.15; // 한 칸 걷는 시간(초)
+function tryStep(d){
+  player.dir = d;
+  const [dx,dy] = DIRS[d];
+  if (walkable(player.x+dx, player.y+dy)){
+    player.fx = player.x; player.fy = player.y;
+    player.x += dx; player.y += dy; player.moving = true; player.t = 0; return true;
+  }
+  return false;
+}
+function update(dt){
+  if (player.moving){
+    player.t += dt / SPEED;
+    if (player.t >= 1){ player.t = 1; player.moving = false; player.step = (player.step+1)%4; }
+  }
+  if (!player.moving && !talking() && !writerOpen()){
+    if (player.path.length){
+      const [nx,ny] = player.path.shift();
+      if (!tryStep(dirTo(player.x,player.y,nx,ny))) { player.path = []; player.onArrive = null; }
+    } else if (player.onArrive){
+      const f = player.onArrive; player.onArrive = null; f();
+    } else if (held.length){
+      tryStep(held[held.length-1]);
+    }
+  }
+}
+
+/* ───────── 그리기 도구 ───────── */
+let g = ctx;
+const r = (x,y,w,h,c) => { g.fillStyle = c; g.fillRect(x,y,w,h); };
+const hash = (x,y) => { let h = x*374761393 + y*668265263; h = (h^(h>>13))*1274126177; return ((h^(h>>16))>>>0)/4294967295; };
+
+function drawPerson(px, py, c, dir, step, o = {}){
+  const x = Math.round(px)+2; let y = Math.round(py)-6;
+  g.fillStyle = 'rgba(0,0,0,.32)'; g.beginPath(); g.ellipse(Math.round(px)+8, Math.round(py)+14.5, 6, 2, 0, 0, Math.PI*2); g.fill();
+  if (o.seated) y += 2;
+  const walk = step%2===1 ? (step===1?1:2) : 0;
+  if (!o.seated){
+    r(x+3, y+16, 2, walk===1?3:4, c.bottom); r(x+7, y+16, 2, walk===2?3:4, c.bottom);
+    r(x+3, y+(walk===1?19:20), 2, 1, c.shoe); r(x+7, y+(walk===2?19:20), 2, 1, c.shoe);
+  } else {
+    r(x+2, y+15, 8, 3, c.bottom);
+  }
+  r(x+2, y+9, 8, 7, c.top);
+  if (c.apron){ r(x+3, y+11, 6, 6, c.apron); r(x+4, y+9, 1, 2, c.apron); r(x+7, y+9, 1, 2, c.apron); }
+  const sw = walk===1 ? 1 : walk===2 ? -1 : 0;
+  if (dir==='left'||dir==='right'){
+    const ax = dir==='left' ? x+5 : x+6;
+    r(ax, y+10+Math.max(0,sw), 1, 5, c.top); r(ax, y+15+Math.max(0,sw), 1, 1, c.skin);
+  } else {
+    r(x+1, y+10+Math.max(0,sw), 1, 5, c.top); r(x+10, y+10+Math.max(0,-sw), 1, 5, c.top);
+    r(x+1, y+15+Math.max(0,sw), 1, 1, c.skin); r(x+10, y+15+Math.max(0,-sw), 1, 1, c.skin);
+  }
+  if (o.book && dir!=='up'){ r(dir==='right'?x+7:x+2, y+11, 4, 4, '#e9dcc0'); r(dir==='right'?x+7:x+2, y+11, 4, 1, '#913E2E'); }
+  r(x+2, y+1, 8, 8, c.skin);
+  const hl = o.long ? 6 : 0;
+  if (dir==='down'){
+    r(x+2, y, 8, 3, c.hair); r(x+1, y+1, 1, 5+hl, c.hair); r(x+10, y+1, 1, 5+hl, c.hair);
+    r(x+4, y+5, 1, 1, '#22150f'); r(x+7, y+5, 1, 1, '#22150f');
+    if (o.glasses){ r(x+3, y+4, 3, 1, '#22150f'); r(x+6, y+4, 3, 1, '#22150f'); }
+    r(x+3, y+7, 1, 1, 'rgba(220,120,110,.55)'); r(x+8, y+7, 1, 1, 'rgba(220,120,110,.55)');
+  } else if (dir==='up'){
+    r(x+1, y, 10, 8+hl, c.hair);
+  } else if (dir==='left'){
+    r(x+2, y, 8, 3, c.hair); r(x+6, y+1, 5, 6+hl, c.hair); r(x+3, y+5, 1, 1, '#22150f');
+    if (o.glasses) r(x+2, y+4, 3, 1, '#22150f');
+  } else {
+    r(x+2, y, 8, 3, c.hair); r(x+1, y+1, 5, 6+hl, c.hair); r(x+8, y+5, 1, 1, '#22150f');
+    if (o.glasses) r(x+7, y+4, 3, 1, '#22150f');
+  }
+  if (c.hat){ r(x+1, y-1, 10, 4, c.hat); r(x+5, y-2, 2, 1, '#f3eee4'); }
+}
+
+/* ───────── 고정 배경 (바닥·벽·바 뒤) ───────── */
+function drawStatic(){
+  g = bctx; g.setTransform(Z,0,0,Z,0,0);
+  // 나무 바닥
+  for (let ty=0; ty<H; ty++) for (let tx=0; tx<W; tx++){
+    const X = tx*T, Y = ty*T;
+    r(X, Y, T, T, '#7b4f35');
+    for (let k=0;k<4;k++){
+      const yy = Y + k*4;
+      r(X, yy+3, T, 1, '#68412b');
+      const joint = (tx*7 + (ty*4+k)*5) % 16;
+      r(X+joint, yy, 1, 3, '#6a432c');
+      if (hash(tx*4+k, ty) > .7) r(X + Math.floor(hash(ty,tx*3+k)*12), yy+1, 3, 1, '#87593c');
+    }
+  }
+  // 바 안쪽 바닥
+  r(64, 48, 144, 16, '#4f3424');
+  for (let x=64;x<208;x+=8) r(x, 48, 1, 16, '#452d1f');
+  // 러그 (큰 테이블 아래)
+  r(80, 140, 112, 68, '#5c211c'); r(82, 142, 108, 64, '#7a2f28');
+  for (let x=86; x<188; x+=8) for (let y=146; y<204; y+=8) r(x+2, y+2, 2, 2, '#9a4a3a');
+  r(84, 144, 104, 1, '#c9a45c'); r(84, 203, 104, 1, '#c9a45c'); r(84, 144, 1, 60, '#c9a45c'); r(187, 144, 1, 60, '#c9a45c');
+  // 안녕편지 책상 아래 작은 러그
+  r(220, 152, 36, 42, '#4a1a16'); r(222, 154, 32, 38, '#6e2a24');
+  r(223, 155, 30, 1, '#c9a45c'); r(223, 190, 30, 1, '#c9a45c'); r(223, 155, 1, 36, '#c9a45c'); r(252, 155, 1, 36, '#c9a45c');
+
+  // 윗벽 — 나무 벽
+  r(0, 0, LW, 48, '#4a2e1f');
+  for (let x=0; x<LW; x+=8) r(x, 0, 1, 48, '#3f2618');
+  r(0, 30, LW, 2, '#5a3826'); r(0, 44, LW, 4, '#2e1c12');
+  // 현판
+  r(100, 8, 72, 11, '#1f140d'); r(101, 9, 70, 9, '#2c1d13');
+  r(100, 8, 72, 1, '#c9a45c'); r(100, 18, 72, 1, '#c9a45c'); r(100, 8, 1, 11, '#c9a45c'); r(171, 8, 1, 11, '#c9a45c');
+  g.fillStyle = '#e4c27a'; g.font = '7.5px Dokrip, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('낭만 젊음 사랑', 136, 13.8);
+  // 아치형 스테인드글라스
+  const cx = 136, top = 21, bot = 44, rad = 12;
+  const PAL = ['#c94c4c','#3f6fb5','#e0b84a','#4f9a6a','#8f5bb0','#e0b84a'];
+  for (let y=top; y<bot; y++){
+    const dy = (top+rad) - y;
+    const hw = y < top+rad ? Math.floor(Math.sqrt(Math.max(0, rad*rad - dy*dy))) : rad;
+    r(cx-hw-2, y, hw*2+4, 1, '#1f140d');
+    for (let x=cx-hw; x<cx+hw; x++){
+      const edge = (x - (cx-hw)) % 4 === 0 || (y-top) % 5 === 0 || x===cx;
+      r(x, y, 1, 1, edge ? '#2a1a12' : PAL[(Math.floor((x+40)/4) + Math.floor(y/5)) % PAL.length]);
+    }
+  }
+  // 바 뒤 선반
+  [[84,'L'],[154,'R']].forEach(([sx]) => {
+    for (let k=0;k<2;k++){
+      const sy = 26 + k*10;
+      r(sx, sy, 34, 2, '#6b4530'); r(sx, sy+2, 34, 1, '#2e1c12');
+      for (let i=0;i<6;i++){
+        const bx = sx + 2 + i*5 + (k*2);
+        const kind = Math.floor(hash(i, k+sx)*3);
+        if (kind===0){ r(bx, sy-4, 3, 4, '#f3eee4'); r(bx+3, sy-3, 1, 2, '#f3eee4'); }
+        else if (kind===1){ r(bx, sy-7, 3, 7, '#3d6b4a'); r(bx+1, sy-9, 1, 2, '#3d6b4a'); }
+        else { r(bx, sy-5, 4, 5, '#b98a52'); r(bx, sy-5, 4, 1, '#e6d2a8'); }
+      }
+    }
+  });
+  // 현판 양옆 벽걸이 스피커
+  const wallSpk = (X) => {
+    r(X+2, 6, 14, 26, 'rgba(0,0,0,.3)');
+    r(X, 4, 14, 26, '#1a1614'); r(X, 4, 14, 1, '#4a403c'); r(X, 4, 1, 26, '#2b2522'); r(X+13, 4, 1, 26, '#0e0b0a');
+    g.fillStyle = '#0e0b0a'; g.beginPath(); g.arc(X+7, 10, 2.4, 0, Math.PI*2); g.fill();
+    g.fillStyle = '#3a3230'; g.beginPath(); g.arc(X+7, 10, .9, 0, Math.PI*2); g.fill();
+    g.fillStyle = '#2b2522'; g.beginPath(); g.arc(X+7, 21, 5.2, 0, Math.PI*2); g.fill();
+    g.fillStyle = '#0e0b0a'; g.beginPath(); g.arc(X+7, 21, 4.2, 0, Math.PI*2); g.fill();
+    g.fillStyle = '#3a3230'; g.beginPath(); g.arc(X+7, 21, 1.5, 0, Math.PI*2); g.fill();
+    r(X+5, 28, 4, 1, '#c9a45c');
+    r(X+5, 2, 4, 2, '#2e1c12');                                   // 벽 고정쇠
+  };
+  wallSpk(66); wallSpk(192);
+  // 액운 쫓는 명태 — 명주실로 감아 현판 위에 걸어 둠
+  (() => {
+    const fx = 122, fy = 1, L = 26;
+    const H = i => i < 5 ? 5 : i < 18 ? 4 : i < 22 ? 3 : 2;
+    for (let i = 0; i < L; i++){
+      const h = H(i), y0 = fy + Math.floor((5 - h) / 2);
+      r(fx + i, y0, 1, Math.ceil(h / 2), '#dcc89c');
+      r(fx + i, y0 + Math.ceil(h / 2), 1, Math.floor(h / 2), '#b09670');
+    }
+    r(fx + L, fy, 2, 1, '#c4af84'); r(fx + L, fy + 4, 2, 1, '#c4af84');   // 꼬리
+    r(fx, fy + 2, 1, 1, '#3a2a1e');                                       // 입
+    r(fx + 2, fy + 1, 1, 1, '#1a1210');                                   // 눈
+    r(fx + 4, fy + 1, 1, 3, '#8e7552');                                   // 아가미
+    for (let i = 8; i <= 17; i += 2) r(fx + i, fy - 1, 1, 7, '#f8f5ee');  // 감은 명주실
+    for (let i = 0; i < 4; i++) r(fx + 11 + i, fy + 5, 1, 2 + (i % 2), '#f1ede2');  // 실타래 (현판 위로 살짝)
+    r(124, 0, 1, 1, '#e9e4d8'); r(146, 0, 1, 1, '#e9e4d8');              // 매단 실
+  })();
+  // 왼쪽·오른쪽 벽
+  r(0, 48, 16, 240, '#3c2518'); r(14, 48, 2, 240, '#2e1c12');
+  r(256, 48, 16, 240, '#3c2518'); r(256, 48, 2, 240, '#2e1c12');
+  // 책장
+  // 스피커 두 대 — 세로로 세운 키 큰 스피커, 울림판은 큰 테이블 쪽으로
+  const oval = (cx, cy, rx, ry, col) => { g.fillStyle = col; g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2); g.fill(); };
+  const speaker = (B, h) => {
+    const Y = B - h;
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(17, B-1, 15, 3); g.fillRect(30, Y+6, 3, h-6);
+    r(17, Y, 13, 3, '#4a403c'); r(17, Y, 13, 1, '#5e544f');          // 윗면
+    r(17, Y+3, 9, h-3, '#171312');                                   // 옆면(벽 쪽)
+    r(22, Y+3, 8, h-3, '#262120'); r(22, Y+3, 1, h-3, '#3a3230');    // 앞면(큰 테이블 쪽)
+    r(29, Y+3, 1, h-3, '#0e0b0a');
+    oval(26, Y+9, 1.6, 2.4, '#0e0b0a'); oval(26.2, Y+9, .6, 1, '#5a504a');
+    oval(26, Y+h-20, 2.4, 4.2, '#0e0b0a'); oval(26.2, Y+h-20, 1, 1.8, '#3a3230');
+    oval(26, Y+h-9, 3.2, 5.6, '#0e0b0a'); oval(26, Y+h-9, 2.2, 4, '#171311'); oval(26.3, Y+h-9, .9, 1.8, '#3a3230');
+    r(18, B-3, 4, 1, '#c9a45c');
+    r(17, B-1, 13, 1, '#0b0908');
+  };
+  // 책장 — 위에서 본 책들, 책등이 큰 테이블 쪽
+  r(16, 129, 16, 60, '#6b4530'); r(16, 129, 16, 1, '#8a5a3c');
+  r(17, 131, 12, 56, '#2e1c12');
+  r(29, 129, 3, 60, '#8a5a3c'); r(31, 129, 1, 60, '#a77650');
+  const BOOK = ['#913E2E','#3f6fb5','#c9a03e','#4f6b45','#6b3b22','#2f3b5c','#7a2f28'];
+  for (let y=131; y<187; y+=14){
+    r(17, y+12, 14, 2, '#6b4530');
+    let yy = y, n = 0;
+    while (yy < y + 11){
+      const th = hash(n, y) > .75 ? 1 : 2, len = 8 + Math.floor(hash(y, n)*4);
+      if (hash(n*7, y) > .9){ yy += 2; n++; continue; }
+      const col = BOOK[Math.floor(hash(n*3, y)*7)];
+      r(29-len, yy, len, th, '#e6dcc6'); r(29-len, yy, 1, th, col); r(27, yy, 2, th, col);
+      yy += th + 1; n++;
+    }
+  }
+  speaker(128, 42);
+  speaker(226, 40);
+  // 철문 (방화문) — 세로로 선 문, 아래 스피커 옆
+  const DT = 226, DB = 272;
+  r(0, DT-2, 16, DB-DT+2, '#3e4246');
+  r(2, DT, 12, DB-DT, '#7f878e'); r(2, DT, 12, 1, '#aab2b9'); r(2, DT, 1, DB-DT, '#959da4'); r(13, DT, 1, DB-DT, '#5d646a');
+  r(3, DT+3, 10, 1, '#959da4'); r(3, DB-4, 10, 1, '#6c737a');
+  r(5, DT+6, 5, 12, '#1f2a33'); r(5, DT+6, 5, 1, '#4a5560');
+  for (let i=0;i<4;i++) r(5, DT+8+i*3, 5, 1, 'rgba(160,175,185,.35)');
+  r(7, DT+6, 1, 12, 'rgba(160,175,185,.35)');
+  r(10, DT+24, 3, 1, '#c8cdd1'); r(10, DT+24, 1, 3, '#c8cdd1'); r(11, DT+23, 1, 1, '#8a9096');
+  r(3, DT-3, 9, 2, '#2c2f32'); r(9, DT-1, 3, 1, '#2c2f32');
+  r(5, DT+32, 5, 3, '#2f7a4a'); r(6, DT+33, 3, 1, '#d8f0e0');
+  r(16, DT-1, 2, DB-DT+1, '#5d646a');
+  // 문 앞 발판
+  r(18, 242, 10, 26, '#5c211c'); r(19, 243, 8, 24, '#7a2f28'); r(20, 244, 6, 1, '#c9a45c'); r(20, 265, 6, 1, '#c9a45c');
+
+  // 아랫벽 — 큰 창 + 문
+  r(0, 288, LW, 16, '#2e1c12');
+  r(18, 290, 236, 12, '#16223a');
+  for (let x=18; x<=254; x+=29.5) r(Math.round(x), 289, 2, 14, '#2e1c12');
+  r(18, 295, 236, 1, '#2e1c12');
+  g.setTransform(1,0,0,1,0,0);
+}
+
+/* ───────── 움직이는 물건들 ───────── */
+function drawCounter(time){
+  // 옆면
+  r(48, 48, 16, 16, '#5e3a26'); r(48, 48, 16, 4, '#a77650');
+  r(208, 48, 16, 16, '#5e3a26'); r(208, 48, 16, 4, '#a77650');
+  // 윗면 + 앞면
+  r(48, 62, 176, 8, '#a77650'); r(48, 62, 176, 1, '#c79468');
+  r(48, 70, 176, 12, '#5e3a26');
+  for (let x=52; x<220; x+=16) r(x, 72, 12, 8, '#4e3020');
+  r(48, 81, 176, 1, '#2e1c12');
+  // 에스프레소 머신
+  r(81, 52, 14, 11, '#b9bec4'); r(81, 52, 14, 2, '#e1e5e8'); r(83, 58, 3, 3, '#2a2a2a'); r(90, 58, 3, 3, '#2a2a2a');
+  if (Math.floor(time*1.5)%3===0){ r(84, 48 - (time*8)%4, 1, 2, 'rgba(255,255,255,.5)'); }
+  // 그라인더·컵
+  r(102, 54, 6, 9, '#2a2a2a'); r(101, 52, 8, 3, '#5a504a');
+  r(150, 59, 3, 3, '#f3eee4'); r(156, 59, 3, 3, '#f3eee4'); r(178, 58, 4, 4, '#f3eee4');
+  // 유리병 (조각이 쌓임)
+  const jx = 210, jy = 46;
+  r(jx, jy, 12, 17, 'rgba(200,225,235,.18)');
+  r(jx, jy, 1, 17, 'rgba(220,240,250,.55)'); r(jx+11, jy, 1, 17, 'rgba(220,240,250,.35)'); r(jx, jy+16, 12, 1, 'rgba(220,240,250,.45)');
+  r(jx+2, jy-3, 8, 3, '#6b4530');
+  const tt = JAR.total ?? state.shredded, inJar = tt ? (tt % JAR_CAPACITY || JAR_CAPACITY) : 0;
+  const fill = 2 + Math.round(inJar / JAR_CAPACITY * 12);
+  for (let i=0; i<fill*6; i++){
+    const fx = jx + 1 + Math.floor(hash(i,7)*10), fy = jy + 15 - Math.floor(hash(7,i)*fill);
+    r(fx, fy, 1, 1, hash(i,i)>.85 ? '#d9b86a' : '#f3eee4');
+  }
+}
+
+function drawTree(tx, ty, time){
+  const bx = tx*T, by = ty*T;
+  g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(bx+8, by+15, 8, 2.5, 0, 0, Math.PI*2); g.fill();
+  r(bx+4, by+9, 8, 6, '#7a2f28'); r(bx+4, by+9, 8, 1, '#a3463a'); r(bx+7, by+7, 2, 2, '#4a2e1f');
+  const tier = (top, h, hw, c1, c2) => {
+    for (let i=0;i<h;i++){ const w = Math.max(1, Math.round(hw*(i+1)/h)); r(bx+8-w, by+top+i, w*2, 1, i%3===2 ? c2 : c1); }
+  };
+  tier(-18, 8, 4, '#3f7a4a', '#2f5d3a');
+  tier(-12, 9, 6, '#3f7a4a', '#2f5d3a');
+  tier(-5, 13, 8, '#3f7a4a', '#2f5d3a');
+  r(bx+7, by-21, 2, 3, '#ffd36b'); r(bx+6, by-20, 4, 1, '#ffd36b');
+  const LIGHTS = [[5,-13],[10,-10],[4,-6],[11,-3],[7,-1],[3,2],[12,4],[8,6],[6,-16]];
+  LIGHTS.forEach(([lx,ly],i) => {
+    const on = (Math.floor(time*2 + i*0.7 + tx) % 3) !== 0;
+    r(bx+lx, by+ly, 1, 1, on ? ['#ffd36b','#ff8a6b','#fff2c4'][i%3] : '#2f5d3a');
+  });
+  [[2,-1],[12,-6],[9,2],[4,-10]].forEach(([cx,cy]) => { r(bx+cx+1, by+cy-2, 1, 2, '#c94c4c'); r(bx+cx, by+cy, 3, 4, '#f3eee4'); r(bx+cx, by+cy+1, 3, 1, '#c9bba8'); });
+}
+
+function drawRedTable(){
+  const x = 112, y = 128, w = 48;
+  r(x, y+1, w, 9, '#a3242b'); r(x, y+10, w, 5, '#7d1a20');
+  for (let i=0;i<w;i+=4) r(x+i, y+14, 2, 1, '#5c1418');
+  r(x, y+1, w, 1, '#c23a3a');
+  [[4,3],[11,5],[19,3],[27,5],[35,3],[41,5]].forEach(([a,b]) => { r(x+a, y+b, 4, 3, '#f3eee4'); });
+}
+
+/* 창가 바 테이블 */
+function drawBarStools(){
+  [2,4,6,10,12,14].forEach(x => { const X = x*T, Y = 16*T; g.fillStyle='rgba(0,0,0,.3)'; g.fillRect(X+4, Y+13, 8, 2); r(X+7, Y+7, 2, 7, '#2e1c12'); r(X+4, Y+4, 8, 4, '#913E2E'); r(X+4, Y+4, 8, 1, '#b4523f'); r(X+5, Y+13, 6, 1, '#2e1c12'); });
+  const X = 8*T, Y = 16*T; r(X+7, Y+9, 2, 5, '#2e1c12'); r(X+5, Y+13, 6, 1, '#2e1c12');
+}
+function drawBarTable(){
+  const x = 32, y = 268, w = 224;
+  r(x, y, w, 8, '#a77650'); r(x, y, w, 1, '#c79468'); r(x, y+8, w, 3, '#6b4530');
+  for (let i=8; i<w; i+=40) r(x+i, y+11, 2, 6, '#2e1c12');
+  [[10,2],[42,3],[78,2],[104,3],[140,2],[170,3],[204,2]].forEach(([a,b]) => { r(x+a, y+b, 3, 3, '#f3eee4'); r(x+a+3, y+b+1, 1, 1, '#f3eee4'); });
+  r(x+118, y+2, 2, 4, '#4f6b45'); r(x+117, y+1, 4, 2, '#6f9a5a');
+}
+
+/* 카펫 위 10인 테이블 */
+function chair(X, Y, back){
+  if (back === 'top'){ r(X+3, Y+2, 10, 3, '#4a2e1f'); r(X+3, Y+2, 10, 1, '#6b4530'); r(X+4, Y+5, 8, 6, '#5e3a26'); }
+  else { r(X+4, Y+3, 8, 6, '#5e3a26'); r(X+3, Y+9, 10, 4, '#4a2e1f'); r(X+3, Y+9, 10, 1, '#6b4530'); }
+}
+function drawLongTableBack(){ for (let x=6;x<=10;x++) chair(x*T, 9*T+2, 'top'); }
+function drawLongTable(time){
+  const x = 96, y = 160, w = 80;
+  g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(x+2, y+14, w-4, 3);
+  r(x+3, y+10, 2, 6, '#2e1c12'); r(x+w-5, y+10, 2, 6, '#2e1c12');
+  r(x, y-4, w, 15, '#a77650'); r(x, y-4, w, 1, '#c79468'); r(x, y+11, w, 2, '#6b4530');
+  for (let i=0;i<w;i+=16) r(x+i, y-3, 1, 14, '#96683f');
+  // 컵·촛불·책
+  [[8,0],[26,4],[44,0],[62,4]].forEach(([a,b]) => { r(x+a, y+b, 3, 3, '#f3eee4'); r(x+a+3, y+b+1, 1, 1, '#f3eee4'); });
+  r(x+38, y+2, 2, 4, '#f3eee4'); r(x+38, y, 2, 2, (Math.sin(time*8)>0)?'#ffd36b':'#ffb347');
+  r(x+15, y+5, 6, 4, '#913E2E'); r(x+68, y-1, 5, 4, '#e9dcc0');
+}
+function drawLongTableFront(){ for (let x=6;x<=10;x++) chair(x*T, 11*T-2, 'bottom'); }
+
+function drawRoundTable(tx, ty, chairs){
+  const x = tx*T, y = ty*T;
+  // 의자 — 등받이가 아래쪽, 앉으면 바를 바라봄
+  chairs.forEach(([cx,cy]) => { const X=cx*T, Y=cy*T;
+    g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(X+4, Y+14, 9, 2);
+    r(X+5, Y+11, 1, 4, '#2e1c12'); r(X+11, Y+11, 1, 4, '#2e1c12');
+    r(X+4, Y+5, 9, 6, '#6b4530'); r(X+4, Y+5, 9, 1, '#8a5a3c');
+    r(X+3, Y+10, 11, 4, '#4a2e1f'); r(X+3, Y+10, 11, 1, '#6b4530'); });
+  // 버건디 동그란 테이블
+  g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(x+8, y+14, 6, 2, 0, 0, Math.PI*2); g.fill();
+  r(x+7, y+8, 2, 6, '#2e1c12'); r(x+5, y+13, 6, 1, '#2e1c12');
+  r(x+2, y+2, 12, 1, '#b4523f'); r(x+1, y+3, 14, 6, '#913E2E'); r(x+2, y+3, 12, 1, '#a84a38');
+  r(x+1, y+9, 14, 1, '#5c211c'); r(x+2, y+10, 12, 1, '#4a1a16');
+  r(x+4, y+4, 3, 2, '#f3eee4'); r(x+9, y+5, 3, 2, '#f3eee4');
+}
+
+function drawDesk(time){
+  // 벽에 건 작은 현판
+  r(232, 141, 26, 9, '#1f140d'); r(232, 141, 26, 1, '#c9a45c'); r(232, 149, 26, 1, '#c9a45c'); r(232, 141, 1, 9, '#c9a45c'); r(257, 141, 1, 9, '#c9a45c');
+  g.fillStyle = '#e4c27a'; g.font = '6px Dokrip, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('안녕편지', 245, 145.6);
+  // 책상 + 스탠드
+  const dx = 240, dy = 160;
+  g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(dx-2, dy+30, 18, 3);
+  r(dx, dy-2, 16, 34, '#5e3a26'); r(dx, dy-2, 16, 3, '#a77650'); r(dx, dy-2, 1, 34, '#c79468');
+  r(dx+3, dy+8, 9, 12, '#f3eee4'); for (let i=0;i<4;i++) r(dx+4, dy+10+i*3, 7, 1, 'rgba(145,62,46,.4)');
+  r(dx+5, dy+22, 6, 1, '#2a1a12');
+  r(dx+9, dy, 2, 6, '#2a2a2a'); r(dx+6, dy-4, 8, 4, '#2f4f3a'); r(dx+7, dy, 6, 1, '#ffe7a8');
+  r(dx+3, dy+25, 7, 4, '#f3eee4'); r(dx+4, dy+26, 5, 1, '#913E2E');   // 약속 카드
+  // 의자
+  r(226, 164, 10, 10, '#4a2e1f'); r(226, 164, 10, 2, '#6b4530'); r(226, 164, 2, 10, '#3c2518');
+}
+
+function drawChandelier(time){
+  const x = 136, y = 162;
+  r(x, 146, 1, 14, 'rgba(201,164,92,.6)');
+  r(x-9, y, 19, 2, '#c9a45c'); r(x-6, y+2, 13, 1, '#9b7a3a');
+  [-9,-4,0,4,9].forEach((dx,i) => { r(x+dx, y-3, 1, 3, '#f3eee4'); const f = (Math.sin(time*6+i)>0) ? '#ffd36b' : '#ffb347'; r(x+dx, y-5, 1, 2, f); });
+  r(x-1, y+3, 3, 3, '#c9a45c');
+}
+
+/* 눈 (창밖) */
+const flakes = Array.from({length:60}, () => ({ x:18+Math.random()*236, y:290+Math.random()*12, v:2+Math.random()*4, d:Math.random()*6 }));
+
+function drawLighting(time){
+  const c = lctx; c.setTransform(1,0,0,1,0,0);
+  c.globalCompositeOperation = 'source-over';
+  c.clearRect(0,0,light.width,light.height);
+  c.fillStyle = 'rgba(18,8,4,.34)'; c.fillRect(0,0,light.width,light.height);
+  c.globalCompositeOperation = 'destination-out';
+  const hole = (x,y,rad,a) => { const gr = c.createRadialGradient(x*Z,y*Z,0,x*Z,y*Z,rad*Z); gr.addColorStop(0,`rgba(0,0,0,${a})`); gr.addColorStop(1,'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect((x-rad)*Z,(y-rad)*Z,rad*2*Z,rad*2*Z); };
+  const flick = 1 + Math.sin(time*7)*0.03;
+  hole(136, 150, 100*flick, .95);
+  hole(136, 70, 60, .7);
+  hole(136, 30, 38, .8);
+  hole(120, 114, 26, .7); hole(152, 114, 26, .7);
+  hole(248, 158, 30*flick, 1);
+  hole(136, 296, 90, .55);
+  hole(10, 250, 24, .5);
+  hole(128, 228, 34, .6);
+  c.globalCompositeOperation = 'source-over';
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.drawImage(light, 0, 0);
+  // 따뜻한 빛
+  ctx.globalCompositeOperation = 'lighter';
+  const warm = (x,y,rad,a,col) => { const gr = ctx.createRadialGradient(x*Z,y*Z,0,x*Z,y*Z,rad*Z); gr.addColorStop(0,col.replace('A',a)); gr.addColorStop(1,col.replace('A',0)); ctx.fillStyle = gr; ctx.fillRect((x-rad)*Z,(y-rad)*Z,rad*2*Z,rad*2*Z); };
+  warm(136, 146, 50, .10, 'rgba(255,190,110,A)');
+  warm(248, 158, 22, .16*flick, 'rgba(255,200,120,A)');
+  warm(120, 102, 14, .08, 'rgba(255,210,140,A)'); warm(152, 102, 14, .08, 'rgba(255,210,140,A)');
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+function arrow(x, y, time){
+  const by = Math.round(y - 16 + Math.sin(time*5)*1.6);
+  r(x+4, by, 9, 2, '#0e0a09'); r(x+5, by+2, 7, 1, '#0e0a09'); r(x+6, by+3, 5, 1, '#0e0a09'); r(x+7, by+4, 3, 1, '#0e0a09'); r(x+8, by+5, 1, 1, '#0e0a09');
+  r(x+5, by+1, 7, 1, '#e8c46a'); r(x+6, by+2, 5, 1, '#e8c46a'); r(x+7, by+3, 3, 1, '#d9a84a'); r(x+8, by+4, 1, 1, '#d9a84a');
+}
+function bubble(x, y, time, mark, col){
+  const by = y - 14 + Math.round(Math.sin(time*4)*1.2);
+  r(x+3, by, 11, 8, '#0e0a09'); r(x+4, by+1, 9, 6, col || '#f3eee4'); r(x+7, by+8, 2, 1, '#0e0a09'); r(x+7, by+7, 2, 1, col || '#f3eee4');
+  if (mark === '…'){ r(x+5, by+4, 1, 1, '#2a1a12'); r(x+8, by+4, 1, 1, '#2a1a12'); r(x+11, by+4, 1, 1, '#2a1a12'); }
+  else { r(x+8, by+2, 1, 3, '#fff'); r(x+8, by+6, 1, 0.01, '#fff'); r(x+8, by+5.5, 1, 1, '#fff'); }
+}
+
+/* ───────── 한 장면 ───────── */
+function render(time){
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.drawImage(bg, 0, 0);
+  g = ctx; ctx.setTransform(Z,0,0,Z,0,0);
+
+  // 창밖 눈
+  ctx.save(); ctx.beginPath(); ctx.rect(18, 290, 236, 12); ctx.clip();
+  if (WEATHER.kind === 'snow') flakes.forEach(f => { const yy = 290 + ((f.y - 290 + time*f.v) % 12); r(Math.round(f.x + Math.sin(time+f.d)*2), Math.round(yy), 1, 1, 'rgba(255,255,255,.85)'); });
+  else if (WEATHER.kind === 'rain') flakes.forEach(f => { const yy = 288 + ((f.y - 290 + time*f.v*6) % 14); r(Math.round(f.x - (yy-290)*0.3), Math.round(yy), 1, 3, 'rgba(170,200,230,.55)'); });
+  else flakes.slice(0, 8).forEach((f, i) => { if (Math.sin(time*0.7 + i*1.3) > .2) r(Math.round(f.x), 292 + (i%3)*3, 1, 1, 'rgba(255,230,170,.7)'); });
+  ctx.restore();
+
+  // y 순서로 겹쳐 그리기
+  const list = [];
+  const px = (player.fx + (player.x-player.fx)*player.t)*T, py = (player.fy + (player.y-player.fy)*player.t)*T;
+  const walkFrame = player.moving ? (player.t < .5 ? (player.step%2===0?1:3) : 0) : 0;
+  list.push({ y:py, d:() => drawPerson(px, py, player.c, player.dir, walkFrame) });
+  npcs.forEach(n => list.push({ y:n.y*T, d:() => drawPerson(n.x*T, n.y*T, n.c, n.dir, 0, n) }));
+  list.push({ y:4*T-1, d:() => drawCounter(time) });
+  list.push({ y:7*T, d:() => drawTree(7,7,time) });
+  list.push({ y:7*T, d:() => drawTree(9,7,time) });
+  list.push({ y:8*T, d:() => drawRedTable() });
+  list.push({ y:9*T-1, d:() => drawLongTableBack() });
+  list.push({ y:10*T, d:() => drawLongTable(time) });
+  list.push({ y:11*T+1, d:() => drawLongTableFront() });
+  list.push({ y:14*T, d:() => drawRoundTable(6,14,[[5,14],[7,14]]) });
+  list.push({ y:14*T, d:() => drawRoundTable(10,14,[[9,14],[11,14]]) });
+  list.push({ y:16*T-1, d:() => drawBarStools() });
+  list.push({ y:17*T, d:() => drawBarTable() });
+  list.push({ y:10*T, d:() => drawDesk(time) });
+  list.sort((a,b) => a.y - b.y).forEach(o => o.d());
+
+  drawChandelier(time);
+  drawLighting(time);
+
+  // 말풍선 표시
+  g = ctx; ctx.setTransform(Z,0,0,Z,0,0);
+  if (!talking()){
+    const tg = FREE ? null : STEPS[state.step].target;
+    if (tg === 'desk') arrow(15*T, 10*T - 6, time);
+    else if (tg){ const n = npcs.find(m => m.id === tg); arrow(n.x*T, n.y*T - (n.seated?2:4), time); }
+  }
+}
+
+let last = performance.now();
+function loop(now){
+  const dt = Math.min(.05, (now-last)/1000); last = now;
+  update(dt); render(now/1000);
+  requestAnimationFrame(loop);
+}
+
+/* ───────── 유리병 ─────────
+   JAR_CAPACITY = 한 병이 가득 차는 편지 수. 넘치면 새 병.
+   JAR_API = 배포 때 전체 집계 주소(Supabase). 지금은 없어서 이 기기에서 쓴 수만 셈. */
+const JAR_CAPACITY = 100;   // 한 병 = 100통
+const JAR_API = {
+  url: 'https://ybqiamjgjesuyzhyzyhm.supabase.co',
+  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlicWlhbWpnamVzdXl6aHl6eWhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1OTcyNDcsImV4cCI6MjA5NTE3MzI0N30.IKDSAHD1puABFT-XDpI4QYr7ZbY65RpkAUvEvcdgZ0c',   // 공개용 anon 키 (숫자 읽기·더하기 함수만 열려 있음)
+};
+const JAR = { total: null };   // 서버에서 받은 전체 편지 수
+function jarCall(fn){
+  const ac = new AbortController(); setTimeout(() => ac.abort(), 5000);
+  return fetch(`${JAR_API.url}/rest/v1/rpc/${fn}`, {
+    method: 'POST', signal: ac.signal,
+    headers: { apikey: JAR_API.key, Authorization: `Bearer ${JAR_API.key}`, 'Content-Type': 'application/json' },
+    body: '{}'
+  }).then(r => r.ok ? r.json() : null).then(v => typeof v === 'number' ? v : null).catch(() => null);
+}
+jarCall('annyeong_total').then(v => { if (v !== null) JAR.total = v; });
+const JAR_BITS = 360;
+const SVGNS = 'http://www.w3.org/2000/svg';
+const jarPieces = document.getElementById('jarPieces'), jarLabel = document.getElementById('jarLabel');
+const jarSvg = jarPieces.ownerSVGElement;
+const PAPER = ['#f3eee4','#ece3d2','#e2d6bf','#f6f1e8','#d6c7ab'];
+const jarBits = [];
+(function buildJar(){
+  // 바닥(y=200)부터 어깨(y=66)까지 종이 띠를 층층이 쌓음
+  const top = 66, bottom = 199, rows = 30, perRow = Math.ceil(JAR_BITS / rows);
+  for (let i = 0; i < JAR_BITS; i++){
+    const row = Math.floor(i / perRow), k = i % perRow;
+    const y = bottom - row * (bottom - top) / rows + (Math.random() * 3 - 1.5);
+    const x = 24 + (k + Math.random() * .8) * (112 / perRow);
+    const w = 7 + Math.random() * 5, h = 2.6 + Math.random() * 1.2, rot = (Math.random() * 70 - 35) | 0;
+    const g = document.createElementNS(SVGNS, 'g'); g.setAttribute('class', 'pc');
+    g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${rot})`);
+    const r = document.createElementNS(SVGNS, 'rect');
+    const col = Math.random() < .05 ? '#913E2E' : PAPER[(Math.random() * PAPER.length) | 0];
+    r.setAttribute('x', -w/2); r.setAttribute('y', -h/2); r.setAttribute('width', w); r.setAttribute('height', h); r.setAttribute('fill', col);
+    g.appendChild(r);
+    if (col !== '#913E2E' && Math.random() < .35){                                  // 글씨 자국
+      const ln = document.createElementNS(SVGNS, 'rect');
+      ln.setAttribute('x', -w/2 + 1); ln.setAttribute('y', -.3); ln.setAttribute('width', w * (.4 + Math.random() * .5)); ln.setAttribute('height', .6); ln.setAttribute('fill', 'rgba(60,40,30,.45)');
+      g.appendChild(ln);
+    }
+    jarPieces.appendChild(g); jarBits.push({ g, x, y, rot, w, h, col });
+  }
+})();
+const bitsFor = n => Math.min(JAR_BITS, Math.round(n / JAR_CAPACITY * JAR_BITS));
+function showJar(n){ const k = bitsFor(n); jarBits.forEach((b, i) => b.g.classList.toggle('on', i < k)); }
+function miniJar(isNew){
+  const sv = document.createElementNS(SVGNS, 'svg'); sv.setAttribute('viewBox', '0 0 160 210'); if (isNew) sv.setAttribute('class', 'new');
+  sv.innerHTML = `<path d="M54 40 L54 48 C54 58 22 62 22 84 L22 184 Q22 202 42 202 L118 202 Q138 202 138 184 L138 84 C138 62 106 58 106 48 L106 40 Z" fill="#ece3d2" stroke="rgba(225,238,244,.8)" stroke-width="8"/>
+    <path d="M22 120 L138 110 L138 140 L22 150 Z" fill="#d6c7ab"/><path d="M22 170 L138 160 L138 175 L22 185 Z" fill="#913E2E" opacity=".5"/>
+    <rect x="57" y="10" width="46" height="30" rx="6" fill="#b4805a"/>`;
+  return sv;
+}
+// 편지 한 통을 병에 더하고, 더한 뒤의 전체 수를 돌려받음. 실패하면 null
+async function jarAdd(){
+  const v = await jarCall('annyeong_add');
+  if (v !== null) JAR.total = v;
+  return v;
+}
+async function fillJar(){
+  const rest = document.getElementById('afterRest'); rest.classList.remove('on');
+  const added = await jarAdd();
+  const online = added !== null;
+  const total = online ? added : state.shredded;
+  const justFilled = total > 0 && total % JAR_CAPACITY === 0;
+  const fullCount = Math.floor(total / JAR_CAPACITY);
+  const cur = justFilled ? JAR_CAPACITY : total % JAR_CAPACITY;
+  const before = Math.max(0, cur - 1);
+  showJar(before);
+  const pct = Math.round(cur / JAR_CAPACITY * 100);
+  const fullEl = document.getElementById('fullJars');
+  const drawFull = (n, popLast) => {
+    fullEl.innerHTML = '';
+    const shown = Math.min(n, 15);
+    for (let i = 0; i < shown; i++) fullEl.appendChild(miniJar(popLast && i === shown - 1));
+    if (n > shown){ const t = document.createElement('span'); t.className = 'fullmore'; t.textContent = `+${n - shown}`; fullEl.appendChild(t); }
+  };
+  drawFull(justFilled ? fullCount - 1 : fullCount, false);
+  jarLabel.innerHTML = '잘린 편지가 유리병에 담기고 있어요…';
+  // 방금 잘린 조각이 병 입구로 떨어져 쌓임
+  const from = bitsFor(before), to = Math.min(JAR_BITS, Math.max(from + 12, bitsFor(cur)));
+  const N = 16;
+  for (let k = 0; k < N; k++){
+    const t = jarBits[Math.min(JAR_BITS - 1, from + Math.floor(k * (to - from) / N))];
+    const d = document.createElementNS(SVGNS, 'rect');
+    d.setAttribute('x', -t.w/2); d.setAttribute('y', -t.h/2); d.setAttribute('width', t.w); d.setAttribute('height', t.h); d.setAttribute('fill', t.col);
+    jarPieces.appendChild(d);
+    const sx = 72 + Math.random() * 16;
+    d.animate([
+      { transform: `translate(${sx}px, 20px) rotate(0deg)` },
+      { transform: `translate(${(sx + t.x) / 2}px, 70px) rotate(${t.rot * 2}deg)`, offset: .45 },
+      { transform: `translate(${t.x}px, ${t.y}px) rotate(${t.rot}deg)` }
+    ], { duration: 900 + Math.random() * 300, delay: k * 80, easing: 'cubic-bezier(.45,0,.9,.6)', fill: 'forwards' })
+      .onfinish = () => { d.remove(); t.g.classList.add('on'); };
+  }
+  setTimeout(() => {
+    showJar(cur);
+    for (let i = from; i < Math.min(JAR_BITS, from + 12); i++) jarBits[i].g.classList.add('on');
+    if (justFilled) drawFull(fullCount, true);
+    const head = justFilled
+      ? `방금 이 병이 가득 찼어요. 가득 찬 병 <b>${fullCount}병</b>`
+      : (fullCount ? `가득 찬 병 <b>${fullCount}병</b> · ` : '') + `지금 병은 <b>${pct}%</b> 찼어요`;
+    const sub = `지금까지 ${total}통의 안녕편지가 담겼어요 · 한 병에 ${JAR_CAPACITY}통`;
+    jarLabel.innerHTML = online ? `${head}<small>${sub}</small>` : '유리병에 담겼어요.';
+    setTimeout(() => rest.classList.add('on'), 500);
+  }, N * 80 + 1300);
+}
+
+/* ───────── 안녕편지 ───────── */
+const writer = document.getElementById('writer'), ta = document.getElementById('ta'), hint = document.getElementById('hint');
+const deskWrite = document.getElementById('deskWrite'), after = document.getElementById('after');
+let busy = false;
+function openWriter(){
+  held.length = 0;
+  ta.value = ''; hint.textContent = '';
+  deskWrite.style.display = ''; after.classList.remove('on');
+  document.getElementById('paper').style.visibility = '';
+  writer.classList.add('on');
+  setTimeout(() => ta.focus(), 50);
+}
+function closeWriter(){
+  if (busy) return;
+  ta.value = '';                    // 쓰다 만 글도 남기지 않음
+  writer.classList.remove('on');
+}
+document.getElementById('cancel').onclick = closeWriter;
+document.getElementById('back').onclick = () => { writer.classList.remove('on'); if (state.justWrote){ state.justWrote = false; say(LINES.outBooth); } };
+document.getElementById('again').onclick = openWriter;
+
+document.getElementById('shred').onclick = () => {
+  if (busy) return;
+  const text = ta.value;
+  if (!text.trim()){ hint.textContent = '한 줄이어도 괜찮아요.'; return; }
+  busy = true; hint.textContent = '';
+  const feed = document.getElementById('feed'), paper = document.getElementById('paper');
+  const shredder = document.getElementById('shredder'), bin = document.getElementById('bin');
+  const h = paper.offsetHeight, scrollTop = ta.scrollTop;
+  const N = 14, strips = [];
+  for (let i=0; i<N; i++){
+    const s = document.createElement('div'); s.className = 'strip';
+    s.style.height = h + 'px';
+    const gh = document.createElement('div'); gh.className = 'ghost'; gh.textContent = text; gh.scrollTop = scrollTop;
+    s.appendChild(gh);
+    const L = (i/N*100).toFixed(2), R = (100 - (i+1)/N*100).toFixed(2);
+    s.style.clipPath = `inset(0 ${R}% 0 ${L}%)`;
+    feed.appendChild(s); strips.push(s);
+    gh.scrollTop = scrollTop;
+  }
+  ta.value = '';                      // 원본 글은 바로 비움
+  paper.style.visibility = 'hidden';
+  shredder.classList.add('run');
+  const DUR = 2600;
+  strips.forEach((s,i) => s.animate(
+    [{ transform:'translateY(0)' }, { transform:`translateY(${h+20}px)` }],
+    { duration: DUR, delay: i*25 + Math.random()*60, easing:'cubic-bezier(.45,.05,.6,1)', fill:'forwards' }
+  ));
+  const bw = bin.offsetWidth;
+  const spawn = setInterval(() => {
+    for (let k=0;k<4;k++){
+      const b = document.createElement('i'); b.className = 'bit';
+      b.style.left = (Math.random()*bw) + 'px';
+      if (Math.random() < .25) b.style.background = '#b9ab9a';
+      bin.appendChild(b);
+      const rot = (Math.random()*360)|0;
+      b.animate([{ transform:`translateY(-6px) rotate(0deg)`, opacity:1 }, { transform:`translateY(${50+Math.random()*25}px) rotate(${rot}deg)`, opacity:0 }],
+        { duration: 700+Math.random()*500, easing:'ease-in', fill:'forwards' }).onfinish = () => b.remove();
+    }
+  }, 45);
+  setTimeout(() => {
+    clearInterval(spawn); shredder.classList.remove('run');
+    strips.forEach(s => s.remove());
+    paper.style.visibility = '';
+    state.shredded += 1; store.set('shredded', state.shredded);
+    if (state.step === DESK_STEP){ advance(); state.justWrote = true; }
+    document.getElementById('count').textContent = '';
+    deskWrite.style.display = 'none'; after.classList.add('on');
+    fillJar();
+    busy = false;
+  }, DUR + 500);
+};
+
+/* ───────── 시작 ───────── */
+function enter(){
+  const intro = document.getElementById('intro');
+  if (intro.style.display === 'none') return;
+  intro.style.display = 'none';
+  if (FREE) say([[null, '(확인 모드) 순서 상관없이 아무에게나 말을 걸 수 있어요.']]);
+  else if (state.step === 0) say(LINES.intro, greet);
+  else say([[null, '다시 오셨네요. 방은 그대로입니다.\n(' + STEPS[state.step].text + ')']]);
+}
+document.getElementById('enter').onclick = enter;
+
+Promise.all([document.fonts.load('10px Dokrip'), document.fonts.load('16px Galmuri11')]).catch(()=>{}).finally(() => {
+  drawStatic();
+  requestAnimationFrame(loop);
+});
+})();
+</script>
+</body>
+</html>
