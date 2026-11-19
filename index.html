@@ -25,6 +25,9 @@ canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image
 .hud{position:absolute;top:10px;left:12px;right:12px;display:flex;justify-content:space-between;pointer-events:none;font-size:12px;text-shadow:1px 1px 0 #000}
 .hud span{background:rgba(14,10,9,.72);padding:4px 8px;border:1px solid #5a3826;white-space:nowrap}
 .hud{gap:8px}
+.hud .left{display:flex;gap:6px;background:none;border:0;padding:0}
+.hud .home{pointer-events:auto;cursor:pointer;background:rgba(14,10,9,.72);color:var(--ink);border:1px solid #5a3826;padding:4px 8px;font:inherit;font-size:inherit;white-space:nowrap}
+.hud .home:hover{border-color:var(--gold);color:var(--gold)}
 .hud #met{overflow:hidden;text-overflow:ellipsis;min-width:0}
 
 /* 대화창 — 옛날 RPG 말풍선 */
@@ -131,7 +134,7 @@ canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image
 
 <div class="stage" id="stage">
   <canvas id="game" width="816" height="912" aria-label="낭만젊음사랑 매장을 옮긴 픽셀 방"></canvas>
-  <div class="hud"><span><i class="long" style="font-style:normal">낭만젊음사랑 · </i>안녕편지</span><span id="met"></span></div>
+  <div class="hud"><span class="left"><span><i class="long" style="font-style:normal">낭만젊음사랑 · </i>안녕편지</span><button class="home" id="home" type="button">↺ 처음으로</button></span><span id="met"></span></div>
   <div class="dialog" id="dialog" aria-live="polite"><div class="who" id="who"></div><div class="txt" id="txt"></div><div class="choices" id="choices"></div><div class="next">▼</div></div>
 </div>
 <div class="help" id="help">방향키·WASD로 걷고, 스페이스로 말을 겁니다 · 휴대폰은 가고 싶은 곳이나 사람을 누르세요</div>
@@ -236,7 +239,7 @@ S(10,14); S(9,14); S(11,14);                  // 큰 테이블과 바 테이블 
 S(15,10); S(15,11);                         // 안녕편지 책상
 
 /* ───────── 사람들 ───────── */
-const state = { step: store.get('step2', 0), party: store.get('party', 0), drink: store.get('drink', null), shredded: store.get('shredded', 0), justWrote: false };
+const state = { step: 0, party: 0, drink: null, shredded: store.get('shredded', 0), justWrote: false };
 const STEPS = [
   { target:'staff',   place:'입구',         text:'입구의 직원과 인사하기' },
   { target:'barista', place:'바',           text:'앞쪽 바에서 주문하기', lines:'order' },
@@ -472,19 +475,19 @@ function nextLine(){
 const talking = () => dlg.classList.contains('on');
 dlg.addEventListener('click', nextLine);
 
-function advance(){ state.step = Math.min(STEPS.length-1, state.step+1); store.set('step2', state.step); updateHud(); }
+function advance(){ state.step = Math.min(STEPS.length-1, state.step+1); updateHud(); }
 function greet(){
   const staff = npcs.find(n => n.id === 'staff');
   staff.dir = dirTo(staff.x, staff.y, player.x, player.y);
   say([['직원', '어서 오세요.\n몇 분이서 오셨나요?', { choices:['1명','2명'], onChoose: i => {
-    state.party = i + 1; store.set('party', state.party);
+    state.party = i + 1;
     say([['직원', (i ? '두 분이시군요.' : '한 분이시군요.') + '\n편하신 자리 잡으시고, 주문은 앞쪽 바에서 도와드릴게요.']], () => { staff.dir = 'up'; advance(); });
   } }]]);
 }
 function order(){
   const O = LINES.order;
   say([[...O.ask, { choices: O.menu, onChoose: i => {
-    state.drink = i; store.set('drink', i);
+    state.drink = i;
     const cat = ['낭만','젊음','사랑'][i], list = QUOTES[cat];
     const q = list[Math.floor(Math.random() * list.length)];
     say([
@@ -1213,10 +1216,11 @@ function enter(){
   if (intro.style.display === 'none') return;
   intro.style.display = 'none';
   if (FREE) say([[null, '(확인 모드) 순서 상관없이 아무에게나 말을 걸 수 있어요.']]);
-  else if (state.step === 0) say(LINES.intro, greet);
-  else say([[null, '다시 오셨네요. 방은 그대로입니다.\n(' + STEPS[state.step].text + ')']]);
+  else say(LINES.intro, greet);
 }
 document.getElementById('enter').onclick = enter;
+// 처음 화면으로 — 진행은 저장하지 않으니 새로 불러오면 처음부터
+document.getElementById('home').onclick = () => { location.reload(); };
 
 Promise.all([document.fonts.load('10px Dokrip'), document.fonts.load('16px Galmuri11')]).catch(()=>{}).finally(() => {
   drawStatic();
