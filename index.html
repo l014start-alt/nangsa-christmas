@@ -45,6 +45,8 @@ canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image
 .choice{background:#2a1d18;color:var(--ink);border:2px solid #5a463c;padding:8px 18px;font-size:15px;font-family:inherit}
 .choice::before{content:"  ";white-space:pre}
 .choice.sel{border-color:var(--gold);background:var(--burgundy)}
+.choice:hover{border-color:var(--gold)}
+.chint{flex-basis:100%;font-size:11px;color:var(--dim);margin-top:2px}
 .choice.sel::before{content:"▶ "}
 @keyframes blink{50%{opacity:0}}
 
@@ -442,19 +444,23 @@ function say(lines, done){
 }
 function showChoices(){
   const opts = pending; pending = null;
-  choice = { opts, sel: 0 };
+  choice = { opts, sel: -1 };
   dlg.classList.add('choosing');
   choicesEl.innerHTML = '';
   opts.choices.forEach((label, i) => {
-    const b = document.createElement('button'); b.className = 'choice' + (i===0 ? ' sel' : ''); b.textContent = label;
+    const b = document.createElement('button'); b.className = 'choice'; b.textContent = label;
     b.addEventListener('click', e => { e.stopPropagation(); pick(i); });
     choicesEl.appendChild(b);
   });
+  const h = document.createElement('div'); h.className = 'chint';
+  h.textContent = '버튼을 눌러 골라 주세요 · 키보드는 ← → 로 고르고 Enter';
+  choicesEl.appendChild(h);
 }
 function moveChoice(d){
   if (!choice) return;
-  choice.sel = (choice.sel + d + choice.opts.choices.length) % choice.opts.choices.length;
-  [...choicesEl.children].forEach((b,i) => b.classList.toggle('sel', i === choice.sel));
+  const n = choice.opts.choices.length;
+  choice.sel = choice.sel < 0 ? (d > 0 ? 0 : n - 1) : (choice.sel + d + n) % n;
+  [...choicesEl.querySelectorAll('.choice')].forEach((b,i) => b.classList.toggle('sel', i === choice.sel));
 }
 function pick(i){
   const opts = choice.opts; choice = null;
@@ -464,7 +470,7 @@ function pick(i){
 }
 function nextLine(){
   if (typing){ clearInterval(typing); typing = null; txt.textContent = full; if (pending) showChoices(); return; }
-  if (choice){ pick(choice.sel); return; }
+  if (choice) return;   // 선택지는 버튼·Enter로만 고름
   if (!queue.length){ dlg.classList.remove('on'); const f = onDone; onDone = null; f && f(); return; }
   const [name, line, opts] = queue.shift();
   who.textContent = name || ''; full = line; txt.textContent = ''; pending = opts || null;
@@ -541,6 +547,8 @@ addEventListener('keydown', e => {
   if (choice){
     const d0 = KEYMAP[e.code];
     if (d0){ e.preventDefault(); moveChoice(d0 === 'left' || d0 === 'up' ? -1 : 1); return; }
+    if (e.code === 'Enter' || e.code === 'NumpadEnter'){ e.preventDefault(); if (choice.sel >= 0 && !e.repeat) pick(choice.sel); return; }
+    if (e.code === 'Space' || e.code === 'KeyZ'){ e.preventDefault(); return; }
     if (e.code === 'Digit1' || e.code === 'Numpad1'){ pick(0); return; }
     if (e.code === 'Digit2' || e.code === 'Numpad2'){ pick(1); return; }
     if ((e.code === 'Digit3' || e.code === 'Numpad3') && choice.opts.choices.length > 2){ pick(2); return; }
