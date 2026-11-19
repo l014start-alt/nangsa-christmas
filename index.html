@@ -23,7 +23,9 @@ button{font-family:inherit;cursor:pointer}
 canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;border:3px solid #0e0a09;outline:2px solid #5a3826;background:#000;touch-action:none;cursor:pointer}
 
 .hud{position:absolute;top:10px;left:12px;right:12px;display:flex;justify-content:space-between;pointer-events:none;font-size:12px;text-shadow:1px 1px 0 #000}
-.hud span{background:rgba(14,10,9,.72);padding:4px 8px;border:1px solid #5a3826}
+.hud span{background:rgba(14,10,9,.72);padding:4px 8px;border:1px solid #5a3826;white-space:nowrap}
+.hud{gap:8px}
+.hud #met{overflow:hidden;text-overflow:ellipsis;min-width:0}
 
 /* 대화창 — 옛날 RPG 말풍선 */
 .dialog{position:absolute;left:2%;right:2%;bottom:3%;min-height:118px;background:rgba(18,12,10,.94);border:3px solid #d9b86a;box-shadow:0 0 0 3px #1E1816,0 0 0 5px #5a3826;padding:16px 20px 20px;display:none;cursor:pointer;user-select:none}
@@ -109,6 +111,8 @@ canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image
   .dialog .txt{font-size:15px}
   .stage{display:flex;flex-direction:column}
   .hud{position:static;order:-1;font-size:11px;margin-bottom:8px}
+  .hud .long{display:none}
+  .hud span{padding:3px 6px}
   .hud span{padding:3px 6px}
   .paper,.strip{height:240px}
   .desk h2{font-size:28px}
@@ -127,7 +131,7 @@ canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image
 
 <div class="stage" id="stage">
   <canvas id="game" width="816" height="912" aria-label="낭만젊음사랑 매장을 옮긴 픽셀 방"></canvas>
-  <div class="hud"><span>낭만젊음사랑 · 안녕편지</span><span id="met"></span></div>
+  <div class="hud"><span><i class="long" style="font-style:normal">낭만젊음사랑 · </i>안녕편지</span><span id="met"></span></div>
   <div class="dialog" id="dialog" aria-live="polite"><div class="who" id="who"></div><div class="txt" id="txt"></div><div class="choices" id="choices"></div><div class="next">▼</div></div>
 </div>
 <div class="help" id="help">방향키·WASD로 걷고, 스페이스로 말을 겁니다 · 휴대폰은 가고 싶은 곳이나 사람을 누르세요</div>
