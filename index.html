@@ -72,7 +72,9 @@ canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image
 .doorbtn.open .doorlabel{opacity:0}
 .intro.leaving{animation:introOut .6s .75s ease-in forwards}
 @keyframes introOut{0%{opacity:1}35%{opacity:1;background-color:rgba(255,190,120,.18)}100%{opacity:0}}
-.doorlabel{background:var(--burgundy);color:#fff;border:3px solid #d9b86a;box-shadow:0 0 0 3px #0e0a09;padding:10px 20px;font-size:15px;font-weight:700;white-space:nowrap}
+.doorlabel{background:#b04a35;color:#fff;border:3px solid #f0cf7f;box-shadow:0 0 0 3px #0e0a09;padding:14px 34px;margin-top:8px;font-size:20px;font-weight:700;letter-spacing:.04em;white-space:nowrap;animation:doorGlow 1.8s ease-in-out infinite}
+@keyframes doorGlow{0%,100%{box-shadow:0 0 0 3px #0e0a09,0 0 0 rgba(240,207,127,0)}50%{box-shadow:0 0 0 3px #0e0a09,0 0 22px 4px rgba(240,207,127,.55)}}
+@media (prefers-reduced-motion:reduce){.doorlabel{animation:none}}
 .doorbtn:hover .doorlabel{filter:brightness(1.12)}
 .intro .peek{font-size:11px;color:var(--dim)}
 .intro .kicker{font-size:12px;color:var(--dim);letter-spacing:.1em}
@@ -152,7 +154,6 @@ canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image
 
 <div class="intro" id="intro">
   <div class="card">
-    <div class="kicker">우리들의 순간, 여섯 번째</div>
     <h1>잊고 싶은 기억이 있나요?</h1>
     <button class="doorbtn" id="enter" type="button" aria-label="문 열고 들어가기">
       <svg viewBox="0 0 120 168" class="door" aria-hidden="true">
@@ -177,7 +178,6 @@ canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image
       </svg>
       <span class="doorlabel">▶ 문 열고 들어가기</span>
     </button>
-    <div class="peek">쓴 글은 어디에도 저장되지 않아요 · 약 5분</div>
   </div>
 </div>
 </div>
@@ -1316,7 +1316,7 @@ document.getElementById('home').onclick = () => { location.reload(); };
 
 // 한동안 아무 움직임이 없으면 첫 화면으로 — 매장 기기에서 다음 손님이 처음부터 시작하도록
 const IDLE_MS = 1 * 60 * 1000;          // 돌아다니는 중: 1분
-const IDLE_WRITING_MS = 5 * 60 * 1000;  // 편지 쓰는 중: 5분 (생각하는 시간 넉넉히)
+const IDLE_WRITING_MS = 2 * 60 * 1000;  // 편지 쓰는 중: 2분
 let lastAct = Date.now();
 ['pointerdown','pointermove','keydown','touchstart','wheel','input'].forEach(ev =>
   addEventListener(ev, () => { lastAct = Date.now(); }, { passive: true, capture: true }));
