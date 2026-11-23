@@ -109,6 +109,7 @@ canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image
 .bit{position:absolute;top:0;width:4px;height:7px;background:var(--paper)}
 .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 .hint{font-size:12px;color:#e7a08f;min-height:16px}
+.charcount{font-size:12px;color:#b9a99a;text-align:right;margin-top:6px;font-variant-numeric:tabular-nums}
 .after{display:none;flex-direction:column;align-items:center;gap:14px;text-align:center;margin:auto 0}
 .after.on{display:flex}
 .after .big{font-size:20px;line-height:1.7;word-break:keep-all}
@@ -197,6 +198,7 @@ canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image
     <div class="feedzone" id="feed">
       <div class="paper" id="paper"><textarea id="ta" maxlength="1200" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="여기에 적어 주세요.&#10;한 줄이어도 괜찮습니다."></textarea></div>
     </div>
+    <div class="charcount" id="charCount">0자 / 1,200자</div>
     <div class="shredder" id="shredder"><span>낭만젊음사랑</span><i class="led"></i></div>
     <div class="bin" id="bin"></div>
     <div class="hint" id="hint"></div>
@@ -252,7 +254,6 @@ canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image
       <button class="btn" id="back">다시 둘러보기</button>
       <button class="btn ghost" id="again">하나 더 쓰기</button>
     </div>
-    <div class="care">혼자 감당하기 어려운 마음이라면, 자살예방 상담전화 109 (24시간)</div>
     </div>
   </div>
 </div>
@@ -403,7 +404,7 @@ const LINES = {
   deskEarly: [[null, '아직 비어 있는 책상이다.\n창가 손님 이야기를 먼저 들어 보자.']],
   outBooth: [[null, '책상에서 일어나니, 트리 쪽에서 누군가 이쪽을 보고 있다.']],
   theEnd: [[null, '이 공간에서 들을 이야기는 여기까지다.\n문을 나서기 전에 천천히 둘러봐도 좋다.']],
-  jar: () => [[null, '유리병 안에 잘게 잘린 종이가 쌓여 있다.\n누가 무엇을 썼는지는 아무도 모른다.' + (JAR.total ? `\n\n(지금까지 ${JAR.total}통 · 가득 찬 병 ${Math.floor(JAR.total / JAR_CAPACITY)}병)` : '')]],
+  jar: () => [[null, '유리병 안에 잘게 잘린 종이가 쌓여 있다.\n누가 무엇을 썼는지는 아무도 모른다.' + (JAR.total ? `\n\n(지금까지 ${fmtN(JAR.total)}통` + (JAR.chars ? ` · ${fmtN(JAR.chars)}자` : '') + ` · 가득 찬 병 ${Math.floor(JAR.total / JAR_CAPACITY)}병)` : '')]],
   machine: [[null, '에스프레소 머신이 낮게 숨을 쉬고 있다.']],
   pollack: [[null, '현판 아래 명태 한 마리가 명주실에 감겨 걸려 있다.\n나쁜 기운은 막고 좋은 일만 들어오라는 뜻이다.']],
   tree: [[null, '트리에 소망편지들이 매달려 있다.\n모두 내년 이맘때 주인을 기다리는 중이다.']],
@@ -1109,16 +1110,18 @@ const JAR_API = {
   url: 'https://ybqiamjgjesuyzhyzyhm.supabase.co',
   key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlicWlhbWpnamVzdXl6aHl6eWhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1OTcyNDcsImV4cCI6MjA5NTE3MzI0N30.IKDSAHD1puABFT-XDpI4QYr7ZbY65RpkAUvEvcdgZ0c',   // 공개용 anon 키 (숫자 읽기·더하기 함수만 열려 있음)
 };
-const JAR = { total: null };   // 서버에서 받은 전체 편지 수
-function jarCall(fn){
+const JAR = { total: null, chars: null };   // 서버에서 받은 전체 편지 수
+function jarCall(fn, args = {}){
   const ac = new AbortController(); setTimeout(() => ac.abort(), 5000);
   return fetch(`${JAR_API.url}/rest/v1/rpc/${fn}`, {
     method: 'POST', signal: ac.signal,
     headers: { apikey: JAR_API.key, Authorization: `Bearer ${JAR_API.key}`, 'Content-Type': 'application/json' },
-    body: '{}'
+    body: JSON.stringify(args)
   }).then(r => r.ok ? r.json() : null).then(v => typeof v === 'number' ? v : null).catch(() => null);
 }
 jarCall('annyeong_total').then(v => { if (v !== null) JAR.total = v; });
+jarCall('annyeong_chars').then(v => { if (v !== null) JAR.chars = v; });
+const fmtN = n => n.toLocaleString('ko-KR');
 const JAR_BITS = 360;
 const SVGNS = 'http://www.w3.org/2000/svg';
 const jarPieces = document.getElementById('jarPieces'), jarLabel = document.getElementById('jarLabel');
@@ -1157,14 +1160,17 @@ function miniJar(isNew){
   return sv;
 }
 // 편지 한 통을 병에 더하고, 더한 뒤의 전체 수를 돌려받음. 실패하면 null
-async function jarAdd(){
-  const v = await jarCall('annyeong_add');
+// 글은 보내지 않고 글자 수(숫자)만 보냄. 글자 수 함수가 아직 없으면 편지 수만 더함
+async function jarAdd(n){
+  let v = await jarCall('annyeong_add_chars', { n });
+  if (v !== null){ const c = await jarCall('annyeong_chars'); if (c !== null) JAR.chars = c; }
+  else v = await jarCall('annyeong_add');
   if (v !== null) JAR.total = v;
   return v;
 }
-async function fillJar(){
+async function fillJar(n){
   const rest = document.getElementById('afterRest'); rest.classList.remove('on');
-  const added = await jarAdd();
+  const added = await jarAdd(n);
   const online = added !== null;
   const total = online ? added : state.shredded;
   const justFilled = total > 0 && total % JAR_CAPACITY === 0;
@@ -1205,7 +1211,7 @@ async function fillJar(){
     const head = justFilled
       ? `방금 이 병이 가득 찼어요. 가득 찬 병 <b>${fullCount}병</b>`
       : (fullCount ? `가득 찬 병 <b>${fullCount}병</b> · ` : '') + `지금 병은 <b>${pct}%</b> 찼어요`;
-    const sub = `지금까지 ${total}통의 망각편지가 담겼어요 · 한 병에 ${JAR_CAPACITY}통`;
+    const sub = `지금까지 ${fmtN(total)}통` + (JAR.chars ? `, ${fmtN(JAR.chars)}자` : '') + `의 망각편지가 담겼어요 · 한 병에 ${JAR_CAPACITY}통`;
     jarLabel.innerHTML = online ? `${head}<small>${sub}</small>` : '유리병에 담겼어요.';
     setTimeout(() => rest.classList.add('on'), 500);
   }, N * 80 + 1300);
@@ -1215,9 +1221,13 @@ async function fillJar(){
 const writer = document.getElementById('writer'), ta = document.getElementById('ta'), hint = document.getElementById('hint');
 const deskWrite = document.getElementById('deskWrite'), after = document.getElementById('after');
 let busy = false;
+const charCount = document.getElementById('charCount');
+const countChars = t => [...t.trim()].length;   // 앞뒤 빈칸 빼고, 띄어쓰기 포함
+const showCount = () => { charCount.textContent = `${fmtN(countChars(ta.value))}자 / 1,200자`; };
+ta.addEventListener('input', showCount);
 function openWriter(){
   held.length = 0;
-  ta.value = ''; hint.textContent = '';
+  ta.value = ''; hint.textContent = ''; showCount();
   deskWrite.style.display = ''; after.classList.remove('on');
   document.getElementById('paper').style.visibility = '';
   writer.classList.add('on');
@@ -1237,6 +1247,7 @@ document.getElementById('shred').onclick = () => {
   const text = ta.value;
   if (!text.trim()){ hint.textContent = '한 줄이어도 괜찮아요.'; return; }
   busy = true; hint.textContent = '';
+  const len = countChars(text);
   const feed = document.getElementById('feed'), paper = document.getElementById('paper');
   const shredder = document.getElementById('shredder'), bin = document.getElementById('bin');
   const h = paper.offsetHeight, scrollTop = ta.scrollTop;
@@ -1251,7 +1262,7 @@ document.getElementById('shred').onclick = () => {
     feed.appendChild(s); strips.push(s);
     gh.scrollTop = scrollTop;
   }
-  ta.value = '';                      // 원본 글은 바로 비움
+  ta.value = ''; showCount();         // 원본 글은 바로 비움
   paper.style.visibility = 'hidden';
   shredder.classList.add('run');
   const DUR = 2600;
@@ -1279,7 +1290,7 @@ document.getElementById('shred').onclick = () => {
     if (state.step === DESK_STEP){ advance(); state.justWrote = true; }
     document.getElementById('count').textContent = '';
     deskWrite.style.display = 'none'; after.classList.add('on');
-    fillJar();
+    fillJar(len); showCount();
     busy = false;
   }, DUR + 500);
 };
