@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>안녕편지 · 낭만젊음사랑</title>
+<title>망각편지 · 낭만젊음사랑</title>
 <meta name="description" content="우리들의 순간, 여섯 번째 — 잊고 싶은 기억이 있나요? 낭만젊음사랑의 방에 들어와 사람들에게 말을 걸어 보세요.">
 <style>
 @font-face{font-family:'Galmuri11';src:url(fonts/Galmuri11.woff2) format('woff2');font-display:swap}
@@ -83,7 +83,7 @@ canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image
 .btn.ghost{background:transparent;color:var(--ink);border-color:#5a463c}
 .intro .logo{font-family:'Dokrip',serif;font-size:18px;color:var(--gold);margin-top:2px}
 
-/* 안녕편지 쓰는 화면 */
+/* 망각편지 쓰는 화면 */
 .writer{position:fixed;inset:0;background:rgba(8,5,4,.92);z-index:30;display:none;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
 .writer.on{display:flex}
 .desk{width:min(560px,100%);display:flex;flex-direction:column;align-items:center;gap:12px;margin:auto 0}
@@ -183,14 +183,14 @@ canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image
 
 <div class="stage" id="stage">
   <canvas id="game" width="816" height="912" aria-label="낭만젊음사랑 매장을 옮긴 픽셀 방"></canvas>
-  <div class="hud"><span class="left"><span><i class="long" style="font-style:normal">낭만젊음사랑 · </i>안녕편지</span></span><span id="met"></span></div>
+  <div class="hud"><span class="left"><span><i class="long" style="font-style:normal">낭만젊음사랑 · </i>망각편지</span></span><span id="met"></span></div>
   <div class="dialog" id="dialog" aria-live="polite"><div class="who" id="who"></div><div class="txt" id="txt"></div><div class="choices" id="choices"></div><div class="next">▼</div></div>
 </div>
 <div class="bottombar"><button class="homebtn" id="home" type="button">↺ 처음으로</button><div class="help" id="help">방향키·WASD로 걷고, 스페이스로 말을 겁니다 · 휴대폰은 가고 싶은 곳이나 사람을 누르세요</div></div>
 
-<div class="writer" id="writer" role="dialog" aria-label="안녕편지 쓰기">
+<div class="writer" id="writer" role="dialog" aria-label="망각편지 쓰기">
   <div class="desk" id="deskWrite">
-    <h2>안녕편지</h2>
+    <h2>망각편지</h2>
     <p class="verse">어떤 기억은 잊어야 살아갈 수 있고,<br>어떤 기억은 잊고 싶어도 잊히지 않고,<br>어떤 기억은 사라졌다고 생각했는데<br>어느 날 갑자기 돌아오기도 합니다.</p>
     <p class="ask">잊고 싶은 기억을 적고, 파쇄기에 넣어 주세요.</p>
     <p class="promise">여기 쓰는 글은 어디에도 저장되지 않고, 누구에게도 보내지지 않습니다.<br>파쇄기에 넣는 순간 이 화면에서도 사라집니다.</p>
@@ -237,7 +237,7 @@ canvas#game{display:block;width:100%;height:auto;image-rendering:pixelated;image
           <g transform="translate(101 54) rotate(10)">
             <path d="M0 0 L46 0 L46 18 L0 18 L-6 9 Z" fill="#e9dcc0" stroke="#9c7f57" stroke-width="1"/>
             <circle cx="-1" cy="9" r="1.6" fill="#9c7f57"/>
-            <text x="24" y="12.4" text-anchor="middle" font-family="Dokrip, serif" font-size="9.5" fill="#7a2f28">안녕편지</text>
+            <text x="24" y="12.4" text-anchor="middle" font-family="Dokrip, serif" font-size="9.5" fill="#7a2f28">망각편지</text>
           </g>
         </svg>
       </div>
@@ -285,7 +285,7 @@ S(6,14); S(5,14); S(7,14);                  // 둥근 테이블 + 의자 (큰 �
 for (let x=2;x<=15;x++) S(x,17);            // 창가 바 테이블
 [2,4,6,10,12,14].forEach(x => S(x,16));       // 바 의자
 S(10,14); S(9,14); S(11,14);                  // 큰 테이블과 바 테이블 사이 동그란 테이블
-S(15,10); S(15,11);                         // 안녕편지 책상
+S(15,10); S(15,11);                         // 망각편지 책상
 
 /* ───────── 사람들 ───────── */
 const state = { step: 0, party: 0, drink: null, shredded: store.get('shredded', 0), justWrote: false };
@@ -294,7 +294,7 @@ const STEPS = [
   { target:'barista', place:'바',           text:'앞쪽 바에서 주문하기', lines:'order' },
   { target:'boss',    place:'큰 테이블',    text:'큰 테이블에 앉은 대표에게 말 걸기', lines:'boss1' },
   { target:'window',  place:'창가',         text:'창가 바 테이블의 손님에게 말 걸기' },
-  { target:'desk',    place:'안녕편지 책상', text:'오른쪽 벽 책상에서 안녕편지 쓰기' },
+  { target:'desk',    place:'망각편지 책상', text:'오른쪽 벽 책상에서 망각편지 쓰기' },
   { target:'wish',    place:'트리',         text:'트리 옆 손님에게 말 걸기' },
   { target:'boss',    place:'큰 테이블',    text:'대표에게 다시 말 걸기', lines:'boss3' },
   { target:null,      place:'',             text:'천천히 둘러보세요' },
@@ -382,7 +382,7 @@ const LINES = {
     ['창가 손님', '저기 오른쪽 벽에 스탠드 켜진 책상 보이시죠?\n거기서 잊고 싶은 기억을 적고, 다 쓰면 파쇄기에 넣으면 된대요.'],
     ['창가 손님', '아주 잘게 잘려서 아무도 읽을 수 없고,\n조각은 바에 있는 유리병에 12월부터 1월까지 모아 둔대요.'],
     ['창가 손님', '이 화면에서 쓰는 편지도 어디로도 보내지지 않고,\n이 기기 안에서 잘려서 끝난대요.'],
-    ['창가 손님', '이름이 안녕편지래요. 잊고 싶은 기억에게 안녕, 하고 보내는 편지.\n먼저 가서 써 보세요. 저는 조금 더 생각해 보고 갈게요.'],
+    ['창가 손님', '이름이 망각편지래요. 잊고 싶은 기억을 적어서 여기 두고 가는 편지.\n먼저 가서 써 보세요. 저는 조금 더 생각해 보고 갈게요.'],
   ],
   wish: [
     ['트리 옆 손님', '저는 소망편지 쓰러 왔어요.\n내년에 있었으면 하는 행복한 순간을 미리 상상해서 쓰는 편지요.'],
@@ -730,7 +730,7 @@ function drawStatic(){
   r(80, 140, 112, 68, '#5c211c'); r(82, 142, 108, 64, '#7a2f28');
   for (let x=86; x<188; x+=8) for (let y=146; y<204; y+=8) r(x+2, y+2, 2, 2, '#9a4a3a');
   r(84, 144, 104, 1, '#c9a45c'); r(84, 203, 104, 1, '#c9a45c'); r(84, 144, 1, 60, '#c9a45c'); r(187, 144, 1, 60, '#c9a45c');
-  // 안녕편지 책상 아래 작은 러그
+  // 망각편지 책상 아래 작은 러그
   r(220, 152, 36, 42, '#4a1a16'); r(222, 154, 32, 38, '#6e2a24');
   r(223, 155, 30, 1, '#c9a45c'); r(223, 190, 30, 1, '#c9a45c'); r(223, 155, 1, 36, '#c9a45c'); r(252, 155, 1, 36, '#c9a45c');
 
@@ -966,7 +966,7 @@ function drawRoundTable(tx, ty, chairs){
 function drawDesk(time){
   // 벽에 건 작은 현판
   r(232, 141, 26, 9, '#1f140d'); r(232, 141, 26, 1, '#c9a45c'); r(232, 149, 26, 1, '#c9a45c'); r(232, 141, 1, 9, '#c9a45c'); r(257, 141, 1, 9, '#c9a45c');
-  g.fillStyle = '#e4c27a'; g.font = '6px Dokrip, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('안녕편지', 245, 145.6);
+  g.fillStyle = '#e4c27a'; g.font = '6px Dokrip, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('망각편지', 245, 145.6);
   // 책상 + 스탠드
   const dx = 240, dy = 160;
   g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(dx-2, dy+30, 18, 3);
@@ -1205,13 +1205,13 @@ async function fillJar(){
     const head = justFilled
       ? `방금 이 병이 가득 찼어요. 가득 찬 병 <b>${fullCount}병</b>`
       : (fullCount ? `가득 찬 병 <b>${fullCount}병</b> · ` : '') + `지금 병은 <b>${pct}%</b> 찼어요`;
-    const sub = `지금까지 ${total}통의 안녕편지가 담겼어요 · 한 병에 ${JAR_CAPACITY}통`;
+    const sub = `지금까지 ${total}통의 망각편지가 담겼어요 · 한 병에 ${JAR_CAPACITY}통`;
     jarLabel.innerHTML = online ? `${head}<small>${sub}</small>` : '유리병에 담겼어요.';
     setTimeout(() => rest.classList.add('on'), 500);
   }, N * 80 + 1300);
 }
 
-/* ───────── 안녕편지 ───────── */
+/* ───────── 망각편지 ───────── */
 const writer = document.getElementById('writer'), ta = document.getElementById('ta'), hint = document.getElementById('hint');
 const deskWrite = document.getElementById('deskWrite'), after = document.getElementById('after');
 let busy = false;
