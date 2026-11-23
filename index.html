@@ -1314,6 +1314,18 @@ document.getElementById('enter').onclick = openDoor;
 // 처음 화면으로 — 진행은 저장하지 않으니 새로 불러오면 처음부터
 document.getElementById('home').onclick = () => { location.reload(); };
 
+// 한동안 아무 움직임이 없으면 첫 화면으로 — 매장 기기에서 다음 손님이 처음부터 시작하도록
+const IDLE_MS = 3 * 60 * 1000;          // 돌아다니는 중: 3분
+const IDLE_WRITING_MS = 5 * 60 * 1000;  // 편지 쓰는 중: 5분 (생각하는 시간 넉넉히)
+let lastAct = Date.now();
+['pointerdown','pointermove','keydown','touchstart','wheel','input'].forEach(ev =>
+  addEventListener(ev, () => { lastAct = Date.now(); }, { passive: true, capture: true }));
+setInterval(() => {
+  if (introOpen() || busy) { lastAct = Date.now(); return; }
+  const limit = writer.classList.contains('on') ? IDLE_WRITING_MS : IDLE_MS;
+  if (Date.now() - lastAct > limit) location.reload();
+}, 5000);
+
 Promise.all([document.fonts.load('10px Dokrip'), document.fonts.load('16px Galmuri11')]).catch(()=>{}).finally(() => {
   drawStatic();
   requestAnimationFrame(loop);
