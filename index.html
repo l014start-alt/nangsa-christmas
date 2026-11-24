@@ -438,7 +438,7 @@ addThing([6,7,8,9,10].flatMap(x => [[x,9],[x,10],[x,11]]), () => say(LINES.longT
 const DESK_STEP = STEPS.findIndex(st => st.target === 'desk');
 addThing([[15,10],[15,11]], () => (FREE || state.step >= DESK_STEP) ? openWriter() : say(LINES.deskEarly), [[14,10,'right'],[14,11,'right']]);
 addThing(Array.from({length:15},(_,i)=>[1+i,18]), () => say(LINES.window_o));
-addThing([[0,15],[0,16]], () => say([[null, '들어온 철문이다.\n밖으로 나가서 첫 화면으로 돌아갈까요?', { choices:['예', '아니오'], onChoose: i => { if (i === 0) location.reload(); else nextLine(); } }]]));
+addThing([[0,15],[0,16]], () => say([[null, '들어온 철문이다.\n밖으로 나가서 첫 화면으로 돌아갈까요?', { choices:['예', '아니오'], onChoose: i => { if (i === 0) location.reload(); else nextLine(true); } }]]));
 addThing(Array.from({length:14},(_,i)=>[2+i,17]).concat([[2,16],[4,16],[6,16],[10,16],[12,16],[14,16]]), () => say(LINES.barTable));
 addThing([[10,14],[9,14],[11,14]], () => say(LINES.roundTable));
 addThing([[6,14],[5,14],[7,14]], () => say(LINES.emptyTable));
@@ -484,10 +484,12 @@ function bfs(goals){
 /* ───────── 대화창 ───────── */
 const dlg = document.getElementById('dialog'), who = document.getElementById('who'), txt = document.getElementById('txt');
 let queue = [], typing = null, full = '', onDone = null, pending = null, choice = null;
+const READ_GUARD_MS = 400;   // 한 줄이 다 나온 뒤 이 시간 동안은 넘김 입력 무시(연타 방지)
+let readyAt = 0;
 const choicesEl = document.getElementById('choices');
 function say(lines, done){
   queue = lines.slice(); onDone = done || null;
-  dlg.classList.add('on'); nextLine();
+  dlg.classList.add('on'); nextLine(true);
 }
 function showChoices(){
   const opts = pending; pending = null;
@@ -515,20 +517,21 @@ function pick(i){
   queue = []; onDone = null;
   opts.onChoose(i);
 }
-function nextLine(){
-  if (typing){ clearInterval(typing); typing = null; txt.textContent = full; if (pending) showChoices(); return; }
+function nextLine(force){
+  if (typing){ clearInterval(typing); typing = null; txt.textContent = full; readyAt = performance.now() + READ_GUARD_MS; if (pending) showChoices(); return; }
   if (choice) return;   // 선택지는 버튼·Enter로만 고름
+  if (force !== true && performance.now() < readyAt) return;   // 방금 다 나온 줄은 바로 못 넘김
   if (!queue.length){ dlg.classList.remove('on'); const f = onDone; onDone = null; f && f(); return; }
   const [name, line, opts] = queue.shift();
   who.textContent = name || ''; full = line; txt.textContent = ''; pending = opts || null;
   let i = 0;
   typing = setInterval(() => {
     i++; txt.textContent = full.slice(0,i);
-    if (i >= full.length){ clearInterval(typing); typing = null; if (pending) showChoices(); }
+    if (i >= full.length){ clearInterval(typing); typing = null; readyAt = performance.now() + READ_GUARD_MS; if (pending) showChoices(); }
   }, 26);
 }
 const talking = () => dlg.classList.contains('on');
-dlg.addEventListener('click', nextLine);
+dlg.addEventListener('click', () => nextLine());
 
 function advance(){ state.step = Math.min(STEPS.length-1, state.step+1); updateHud(); }
 function greet(){
@@ -620,7 +623,7 @@ function interact(){
 
 cv.addEventListener('pointerdown', e => {
   if (introOpen() || writerOpen()) return;
-  if (talking()){ if (!choice) nextLine(); return; }
+  if (talking()) return;   // 대화 중엔 방 화면 클릭으로 넘기지 않음 — 대화창을 눌러야 넘어감
   const r = cv.getBoundingClientRect();
   const tx = Math.floor((e.clientX - r.left) / r.width * LW / T);
   const ty = Math.floor((e.clientY - r.top) / r.height * LH / T);
